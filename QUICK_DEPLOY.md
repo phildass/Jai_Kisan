@@ -167,6 +167,7 @@ sudo rm /var/www/html/index.nginx-debian.html
 
 ```bash
 # Check deployment setup
+chmod +x check-deployment.sh
 ./check-deployment.sh
 
 # Check services
