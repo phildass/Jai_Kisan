@@ -28,10 +28,25 @@
 git clone https://github.com/phildass/Jai_Kisan.git
 cd Jai_Kisan
 
-# No installation needed - uses only Python standard library!
+# For CLI only - no installation needed (uses only Python standard library)
+# For Web Application - install dependencies
+pip install -r requirements.txt
 ```
 
 ### Usage
+
+**Web Application (Recommended):**
+```bash
+python app.py
+# Visit http://localhost:5000 in your browser
+```
+
+Features:
+- User registration with OTP verification
+- 24-hour free trial
+- Payment integration (₹116.82)
+- Mobile-friendly responsive design
+- Download reports feature
 
 **Command Line Interface:**
 ```bash

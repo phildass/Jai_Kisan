@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+
+{% block title %}Payment - (J)ai Kisan{% endblock %}
+
+{% block content %}
+<div class="payment-page">
+    <div class="container">
+        <div class="payment-card">
+            <div class="payment-icon">💳</div>
+            <h2>Continue Your (J)ai Kisan Journey</h2>
+            <p class="payment-subtitle">Your free trial has ended. Continue with full access!</p>
+
+            <div class="pricing-details">
+                <div class="price-breakdown">
+                    <div class="price-row">
+                        <span>Subscription Fee:</span>
+                        <span>₹99.00</span>
+                    </div>
+                    <div class="price-row">
+                        <span>GST (18%):</span>
+                        <span>₹17.82</span>
+                    </div>
+                    <div class="price-row total">
+                        <span><strong>Total Amount:</strong></span>
+                        <span><strong>₹116.82</strong></span>
+                    </div>
+                </div>
+
+                <div class="payment-benefits">
+                    <h3>What You Get:</h3>
+                    <ul>
+                        <li>✓ Unlimited fertilizer recommendations</li>
+                        <li>✓ State-specific soil analysis</li>
+                        <li>✓ Economic price comparisons</li>
+                        <li>✓ Eco-friendly alternatives</li>
+                        <li>✓ Download reports anytime</li>
+                        <li>✓ Expert agricultural guidance</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="payment-methods">
+                <h3>Payment Methods</h3>
+                <p class="payment-info">Pay securely using UPI, Card, Net Banking, or Wallet</p>
+                
+                <form id="paymentForm" method="POST" action="{{ url_for('payment_success') }}">
+                    <input type="hidden" name="payment_id" id="payment_id">
+                    <input type="hidden" name="order_id" value="{{ order.id }}">
+                    <input type="hidden" name="signature" id="signature">
+                    
+                    <button type="button" onclick="initiatePayment()" class="btn btn-primary btn-large btn-block">
+                        Pay ₹116.82 Now
+                    </button>
+                </form>
+
+                <div class="demo-note">
+                    <p><em>Note: This is a demo payment flow. In production, this will integrate with Razorpay payment gateway.</em></p>
+                    <button onclick="simulatePayment()" class="btn btn-secondary btn-block">
+                        Simulate Payment (Demo)
+                    </button>
+                </div>
+            </div>
+
+            <div class="legal-disclaimer">
+                <h4>Terms & Conditions</h4>
+                <ul>
+                    <li>Payment is one-time and provides lifetime access to the service</li>
+                    <li>All amounts are inclusive of 18% GST</li>
+                    <li>Payments are processed securely through trusted payment gateways</li>
+                    <li>Refunds available within 7 days if service is unsatisfactory</li>
+                    <li>By proceeding, you agree to our Terms of Service and Privacy Policy</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function initiatePayment() {
+    // In production, integrate with Razorpay
+    alert('Production payment integration coming soon!\n\nFor demo, use "Simulate Payment" button below.');
+    
+    // Razorpay integration example (commented for demo):
+    /*
+    var options = {
+        "key": "{{ razorpay_key }}",
+        "amount": "{{ order.amount }}",
+        "currency": "INR",
+        "name": "(J)ai Kisan",
+        "description": "Agricultural Consultant Subscription",
+        "order_id": "{{ order.id }}",
+        "handler": function (response){
+            document.getElementById('payment_id').value = response.razorpay_payment_id;
+            document.getElementById('signature').value = response.razorpay_signature;
+            document.getElementById('paymentForm').submit();
+        },
+        "prefill": {
+            "name": "{{ current_user.full_name }}",
+            "email": "{{ current_user.email or '' }}",
+            "contact": "{{ current_user.mobile }}"
+        },
+        "theme": {
+            "color": "#2E7D32"
+        }
+    };
+    var rzp = new Razorpay(options);
+    rzp.open();
+    */
+}
+
+function simulatePayment() {
+    if (confirm('Simulate successful payment?\n\nThis will mark your account as paid.')) {
+        document.getElementById('payment_id').value = 'demo_payment_' + Date.now();
+        document.getElementById('signature').value = 'demo_signature';
+        document.getElementById('paymentForm').submit();
+    }
+}
+</script>
+{% endblock %}

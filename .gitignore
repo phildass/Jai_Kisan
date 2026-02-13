@@ -45,3 +45,10 @@ htmlcov/
 /tmp/
 *.tmp
 *.bak
+
+# Database
+*.db
+instance/
+
+# Environment variables
+.env

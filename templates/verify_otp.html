@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}Verify OTP - (J)ai Kisan{% endblock %}
+
+{% block content %}
+<div class="auth-page">
+    <div class="container">
+        <div class="auth-card">
+            <div class="otp-icon">📱</div>
+            <h2>Verify OTP</h2>
+            <p class="auth-subtitle">
+                We've sent a 6-digit OTP to your registered mobile number.<br>
+                Please enter it below to complete registration.
+            </p>
+
+            <form method="POST" action="{{ url_for('verify_otp') }}" class="auth-form">
+                <div class="form-group">
+                    <label for="otp">Enter OTP <span class="required">*</span></label>
+                    <input type="text" id="otp" name="otp" required 
+                           pattern="[0-9]{6}" 
+                           maxlength="6"
+                           placeholder="6-digit OTP"
+                           class="otp-input"
+                           autofocus>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block">
+                    Verify OTP
+                </button>
+            </form>
+
+            <p class="auth-footer">
+                Didn't receive OTP? <a href="#" onclick="alert('Resend feature coming soon!'); return false;">Resend OTP</a>
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}
