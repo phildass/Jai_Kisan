@@ -166,7 +166,9 @@ def register():
     
     # Get states for dropdown
     from data.states_data import STATE_REGIONS
-    states = list(STATE_REGIONS.keys())
+    states = []
+    for region, region_states in STATE_REGIONS.items():
+        states.extend(region_states)
     
     return render_template('register.html', states=states)
 
@@ -243,9 +245,13 @@ def dashboard():
     from data.crops_data import CROP_CATEGORIES
     from data.states_data import STATE_REGIONS
     
+    states = []
+    for region, region_states in STATE_REGIONS.items():
+        states.extend(region_states)
+    
     return render_template('dashboard.html', 
                          crop_categories=CROP_CATEGORIES,
-                         states=list(STATE_REGIONS.keys()),
+                         states=states,
                          trial_remaining=trial_remaining)
 
 
@@ -345,6 +351,13 @@ def google_auth():
     # In production, implement Google OAuth flow
     flash('Google Sign-In is not yet implemented. Please use regular registration.', 'info')
     return redirect(url_for('register'))
+
+
+@app.route('/public/<path:filename>')
+def serve_public(filename):
+    """Serve files from public directory"""
+    from flask import send_from_directory
+    return send_from_directory('public', filename)
 
 
 # Initialize database

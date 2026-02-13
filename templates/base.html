@@ -12,7 +12,7 @@
     <header class="app-header">
         <div class="container">
             <a href="{{ url_for('home') }}" class="logo-link">
-                <img src="{{ url_for('static', filename='../public/images/jai_kisan_logo.png') }}" 
+                <img src="/public/images/jai_kisan_logo.png" 
                      alt="(J)ai Kisan Logo" class="logo">
                 <span class="logo-text">(J)ai Kisan</span>
             </a>
@@ -34,7 +34,7 @@
                     
                     <a href="{{ url_for('dashboard') }}" class="nav-link">Dashboard</a>
                     <button class="download-btn" onclick="window.location.href='{{ url_for('download') }}'">
-                        <img src="{{ url_for('static', filename='../public/images/jai_kisan_logo.png') }}" 
+                        <img src="/public/images/jai_kisan_logo.png" 
                              alt="Download" class="download-logo">
                         Download
                     </button>
