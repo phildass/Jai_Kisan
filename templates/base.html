@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}(J)ai Kisan - Your Digital Village Elder{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Header with Logo and Navigation -->
+    <header class="app-header">
+        <div class="container">
+            <a href="{{ url_for('home') }}" class="logo-link">
+                <img src="{{ url_for('static', filename='../public/images/jai_kisan_logo.png') }}" 
+                     alt="(J)ai Kisan Logo" class="logo">
+                <span class="logo-text">(J)ai Kisan</span>
+            </a>
+            
+            <nav class="main-nav">
+                {% if current_user.is_authenticated %}
+                    <span class="user-welcome">नमस्ते, {{ current_user.full_name }}</span>
+                    
+                    {% if current_user.payment_status != 'paid' %}
+                        {% set trial_hours = current_user.get_trial_remaining() %}
+                        {% if trial_hours is not none and trial_hours > 0 %}
+                            <span class="trial-badge">Trial: {{ "%.1f"|format(trial_hours) }}h left</span>
+                        {% elif trial_hours is not none %}
+                            <span class="trial-badge expired">Trial Expired</span>
+                        {% endif %}
+                    {% else %}
+                        <span class="paid-badge">✓ Paid Member</span>
+                    {% endif %}
+                    
+                    <a href="{{ url_for('dashboard') }}" class="nav-link">Dashboard</a>
+                    <button class="download-btn" onclick="window.location.href='{{ url_for('download') }}'">
+                        <img src="{{ url_for('static', filename='../public/images/jai_kisan_logo.png') }}" 
+                             alt="Download" class="download-logo">
+                        Download
+                    </button>
+                    <a href="{{ url_for('logout') }}" class="nav-link">Logout</a>
+                {% else %}
+                    <a href="{{ url_for('register') }}" class="nav-link btn-register">Register</a>
+                    <a href="{{ url_for('login') }}" class="nav-link">Login</a>
+                {% endif %}
+            </nav>
+        </div>
+    </header>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="flash-messages container">
+                {% for category, message in messages %}
+                    <div class="flash-message flash-{{ category }}">
+                        {{ message }}
+                        <button onclick="this.parentElement.remove()" class="close-btn">&times;</button>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <!-- Main Content -->
+    <main class="main-content">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+        <div class="container">
+            <p>&copy; 2024 (J)ai Kisan - जय किसान! (Victory to the Farmers!)</p>
+            <p class="footer-tagline">May your fields prosper and your soil stay healthy 🌾</p>
+        </div>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

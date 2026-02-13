@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="hero-section">
+    <div class="container">
+        <div class="hero-content">
+            <h1 class="hero-title">नमस्ते! (Namaste!)</h1>
+            <h2 class="hero-subtitle">Welcome to (J)ai Kisan</h2>
+            <p class="hero-description">
+                Your Digital Village Elder - An Intelligent Agricultural Consultant for Indian Farmers
+            </p>
+            
+            <div class="hero-features">
+                <div class="feature">
+                    <span class="feature-icon">🌱</span>
+                    <h3>29+ Crops Coverage</h3>
+                    <p>Cereals, pulses, cash crops, oilseeds & horticulture</p>
+                </div>
+                <div class="feature">
+                    <span class="feature-icon">🗺️</span>
+                    <h3>Regional Intelligence</h3>
+                    <p>State-specific soil & agro-climatic zone advice</p>
+                </div>
+                <div class="feature">
+                    <span class="feature-icon">💰</span>
+                    <h3>Economic Optimization</h3>
+                    <p>Save ₹125-150 per bag with smart recommendations</p>
+                </div>
+                <div class="feature">
+                    <span class="feature-icon">🌍</span>
+                    <h3>Environmental First</h3>
+                    <p>Green alternatives & Bhoomi Raksha principle</p>
+                </div>
+            </div>
+
+            <div class="cta-buttons">
+                <a href="{{ url_for('register') }}" class="btn btn-primary btn-large">
+                    Start Free 24-Hour Trial
+                </a>
+                <a href="{{ url_for('login') }}" class="btn btn-secondary btn-large">
+                    Sign In
+                </a>
+            </div>
+
+            <div class="pricing-info">
+                <p class="pricing-note">
+                    ✨ <strong>Free for 24 hours</strong> after registration<br>
+                    Then just <strong>₹99 + ₹17.82 GST = ₹116.82</strong> for continued access
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="info-section">
+    <div class="container">
+        <h2>Why Choose (J)ai Kisan?</h2>
+        
+        <div class="info-grid">
+            <div class="info-card">
+                <h3>🎯 For Small Farmers</h3>
+                <p>Designed specifically for Indian farmers with simple, clear advice in familiar language</p>
+            </div>
+            <div class="info-card">
+                <h3>📊 Data-Driven</h3>
+                <p>Based on ICAR guidelines and Soil Health Card recommendations</p>
+            </div>
+            <div class="info-card">
+                <h3>💚 Eco-Friendly</h3>
+                <p>Always recommends organic and green alternatives first</p>
+            </div>
+            <div class="info-card">
+                <h3>📱 Mobile-Friendly</h3>
+                <p>Works perfectly on your smartphone - access anywhere, anytime</p>
+            </div>
+        </div>
+
+        <div class="testimonial">
+            <blockquote>
+                "May your fields prosper and your soil stay healthy"
+            </blockquote>
+            <p class="testimonial-author">- The (J)ai Kisan Team</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

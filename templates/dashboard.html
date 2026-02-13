@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - (J)ai Kisan{% endblock %}
+
+{% block content %}
+<div class="dashboard-page">
+    <div class="container">
+        <div class="dashboard-header">
+            <h1>Your Agricultural Consultant Dashboard</h1>
+            <p class="tagline">नमस्ते! Get expert fertilizer recommendations</p>
+        </div>
+
+        <div class="recommendation-form-card">
+            <h2>Get Fertilizer Recommendation</h2>
+            
+            <form id="recommendationForm" class="recommendation-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="crop">Select Crop <span class="required">*</span></label>
+                        <select id="crop" name="crop" required>
+                            <option value="">Choose a crop...</option>
+                            {% for category, crops in crop_categories.items() %}
+                                <optgroup label="{{ category }}">
+                                    {% for crop in crops %}
+                                        <option value="{{ crop }}">{{ crop }}</option>
+                                    {% endfor %}
+                                </optgroup>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="state">Select State <span class="required">*</span></label>
+                        <select id="state" name="state" required>
+                            <option value="">Choose a state...</option>
+                            {% for state in states %}
+                                <option value="{{ state }}" {% if state == current_user.state %}selected{% endif %}>
+                                    {{ state }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="growth_stage">Select Growth Stage <span class="required">*</span></label>
+                    <select id="growth_stage" name="growth_stage" required>
+                        <option value="">Choose a growth stage...</option>
+                        <option value="Vegetative Phase (Leaves/Stem growth)">Vegetative Phase (Leaves/Stem growth)</option>
+                        <option value="Flowering/Reproductive Phase">Flowering/Reproductive Phase</option>
+                        <option value="Grain Filling/Fruit Development">Grain Filling/Fruit Development</option>
+                        <option value="Pre-Sowing/Land Preparation">Pre-Sowing/Land Preparation</option>
+                    </select>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-large" id="submitBtn">
+                    Get Recommendation
+                </button>
+            </form>
+        </div>
+
+        <div id="recommendationResult" class="recommendation-result" style="display: none;">
+            <div class="result-header">
+                <h2>Your Fertilizer Recommendation</h2>
+                <button onclick="printRecommendation()" class="btn btn-secondary">
+                    Print / Save
+                </button>
+            </div>
+            <div id="recommendationContent" class="recommendation-content"></div>
+        </div>
+
+        <div id="loadingSpinner" class="loading-spinner" style="display: none;">
+            <img src="{{ url_for('static', filename='../public/images/jai_kisan_logo.png') }}" 
+                 alt="Loading..." class="spinner-logo">
+            <p>Analyzing your requirements...</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('recommendationForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const crop = document.getElementById('crop').value;
+    const state = document.getElementById('state').value;
+    const growthStage = document.getElementById('growth_stage').value;
+    
+    if (!crop || !state || !growthStage) {
+        alert('Please fill all required fields');
+        return;
+    }
+    
+    // Show loading spinner
+    document.getElementById('loadingSpinner').style.display = 'block';
+    document.getElementById('recommendationResult').style.display = 'none';
+    document.getElementById('submitBtn').disabled = true;
+    
+    try {
+        const response = await fetch('{{ url_for("get_recommendation") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                crop: crop,
+                state: state,
+                growth_stage: growthStage
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            // Convert markdown-style formatting to HTML
+            let htmlContent = data.recommendation
+                .replace(/\n/g, '<br>')
+                .replace(/### (.*?)(<br>|$)/g, '<h3>$1</h3>')
+                .replace(/## (.*?)(<br>|$)/g, '<h2>$1</h2>')
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\|(.*?)\|/g, function(match) {
+                    // Simple table rendering
+                    return match;
+                });
+            
+            document.getElementById('recommendationContent').innerHTML = htmlContent;
+            document.getElementById('recommendationResult').style.display = 'block';
+            
+            // Scroll to result
+            document.getElementById('recommendationResult').scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'start' 
+            });
+        } else {
+            if (response.status === 403) {
+                alert(data.error || 'Your trial has expired. Please make a payment to continue.');
+                window.location.href = "{{ url_for('payment') }}";
+            } else {
+                alert('Error: ' + (data.error || 'Failed to get recommendation'));
+            }
+        }
+    } catch (error) {
+        alert('Network error. Please check your connection and try again.');
+        console.error('Error:', error);
+    } finally {
+        document.getElementById('loadingSpinner').style.display = 'none';
+        document.getElementById('submitBtn').disabled = false;
+    }
+});
+
+function printRecommendation() {
+    window.print();
+}
+</script>
+{% endblock %}
