@@ -15,7 +15,7 @@ from jai_kisan_agent import JaiKisanAgent
 # Initialize Flask app
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', secrets.token_hex(16))
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///jai_kisan.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URI', 'sqlite:///jai_kisan.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Initialize extensions
@@ -333,16 +333,24 @@ Thank you for using (J)ai Kisan!
 जय किसान! (Victory to the Farmers!)
 """
     
-    # Create temp file
+    # Create temp file - it will be sent and then we clean it up
     import tempfile
+    import os as os_module
     with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.txt') as f:
         f.write(content)
         temp_path = f.name
     
-    return send_file(temp_path, 
-                    as_attachment=True, 
-                    download_name=f'jai_kisan_report_{current_user.id}.txt',
-                    mimetype='text/plain')
+    try:
+        return send_file(temp_path, 
+                        as_attachment=True, 
+                        download_name=f'jai_kisan_report_{current_user.id}.txt',
+                        mimetype='text/plain')
+    finally:
+        # Clean up temp file after sending
+        try:
+            os_module.remove(temp_path)
+        except:
+            pass
 
 
 @app.route('/google-auth')
@@ -366,4 +374,6 @@ with app.app_context():
 
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    # Only enable debug mode in development (not in production)
+    debug_mode = os.getenv('FLASK_ENV') == 'development'
+    app.run(debug=debug_mode, host='0.0.0.0', port=5000)
