@@ -21,6 +21,9 @@
 
 ## 🚀 Quick Start
 
+> **Important:** This is a **Python Flask web application**, not a Node.js app. 
+> Use `python` and `pip` commands, not `npm` or `yarn`.
+
 ### Installation
 
 ```bash
@@ -31,14 +34,28 @@ cd Jai_Kisan
 # For CLI only - no installation needed (uses only Python standard library)
 # For Web Application - install dependencies
 pip install -r requirements.txt
+
+# Configure environment (copy and edit .env file)
+cp .env.example .env
 ```
 
+**📘 New to deployment? See [SETUP.md](SETUP.md) for detailed step-by-step instructions.**
+
 ### Usage
+
+**Quick Start Script (Easiest):**
+```bash
+chmod +x start.sh
+./start.sh
+# Automatically sets up environment and starts the app
+```
 
 **Web Application (Recommended):**
 ```bash
 python app.py
 # Visit http://localhost:5000 in your browser
+# To run on a different port (e.g., 3050):
+# Add PORT=3050 to your .env file
 ```
 
 Features:
@@ -68,7 +85,10 @@ print(response)
 
 ## 📖 Documentation
 
-- **[Complete Documentation](DOCUMENTATION.md)** - Full feature guide and API reference
+- **[SETUP.md](SETUP.md)** - **NEW!** Step-by-step local deployment guide
+- **[DEPLOYMENT.md](DEPLOYMENT.md)** - Production deployment with DNS configuration
+- **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** - **NEW!** Common issues and solutions
+- **[DOCUMENTATION.md](DOCUMENTATION.md)** - Full feature guide and API reference
 - **[System Prompt](system_prompt.md)** - Complete system requirements and persona definition
 - **[Example Usage](examples/example_usage.md)** - Detailed scenarios and code examples
 

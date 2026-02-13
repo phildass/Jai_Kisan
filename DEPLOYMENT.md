@@ -136,12 +136,26 @@ sudo systemctl start jai-kisan
 
 ## Nginx Configuration (Reverse Proxy)
 
+### For Custom Domain (e.g., aienter.in)
+
+**Important:** Before configuring Nginx, ensure your DNS A record points to your server's IP address.
+
 Create `/etc/nginx/sites-available/jai-kisan`:
+
+```nginx
+# Copy the provided example
+sudo cp /path/to/Jai_Kisan/nginx.conf.example /etc/nginx/sites-available/jai-kisan
+
+# Edit with your domain and paths
+sudo nano /etc/nginx/sites-available/jai-kisan
+```
+
+Example configuration (see `nginx.conf.example` for full version):
 
 ```nginx
 server {
     listen 80;
-    server_name your-domain.com;
+    server_name aienter.in www.aienter.in;
 
     location / {
         proxy_pass http://127.0.0.1:5000;
@@ -163,13 +177,86 @@ server {
 }
 ```
 
+### Remove Default Pages (Critical for Hostinger Users)
+
+If you see a default hosting provider page instead of your app:
+
+```bash
+# Remove default Nginx index files
+sudo rm /var/www/html/index.html
+sudo rm /var/www/html/index.nginx-debian.html
+sudo rm /usr/share/nginx/html/index.html
+
+# Remove any default Hostinger pages
+sudo rm /var/www/html/index.php
+```
+
 Enable the site:
 
 ```bash
+# Remove default site
+sudo rm /etc/nginx/sites-enabled/default
+
+# Enable your site
 sudo ln -s /etc/nginx/sites-available/jai-kisan /etc/nginx/sites-enabled/
 sudo nginx -t
 sudo systemctl reload nginx
 ```
+
+## DNS Configuration for Custom Domains
+
+### Step 1: Configure DNS A Records
+
+In your domain registrar or DNS provider (e.g., Hostinger DNS panel):
+
+1. **Add A record for root domain:**
+   - Type: `A`
+   - Host: `@` (or leave blank for root domain)
+   - Points to: Your VPS IP address (e.g., `203.0.113.45`)
+   - TTL: `3600` (or Auto)
+
+2. **Add A record for www subdomain:**
+   - Type: `A`
+   - Host: `www`
+   - Points to: Your VPS IP address
+   - TTL: `3600`
+
+### Step 2: Verify DNS Propagation
+
+DNS changes can take 1-48 hours to propagate globally:
+
+```bash
+# Check DNS resolution
+dig aienter.in A +short
+nslookup aienter.in
+
+# Check worldwide propagation
+# Visit: https://www.whatsmydns.net/?query=aienter.in&type=A
+```
+
+### Step 3: Verify Server is Accessible
+
+```bash
+# Test from your VPS
+curl http://localhost:5000
+
+# Test from external
+curl http://YOUR_SERVER_IP:5000
+
+# Once DNS propagates
+curl http://aienter.in
+```
+
+### Troubleshooting DNS Issues
+
+**Still seeing default page after DNS propagation?**
+
+1. Clear browser cache (Ctrl+Shift+Delete)
+2. Try incognito/private mode
+3. Check Nginx configuration: `sudo nginx -t`
+4. Check Nginx error logs: `sudo tail -f /var/log/nginx/error.log`
+5. Ensure application is running: `sudo systemctl status jai-kisan`
+6. See [TROUBLESHOOTING.md](TROUBLESHOOTING.md) for detailed solutions
 
 ## SSL Certificate (HTTPS)
 
