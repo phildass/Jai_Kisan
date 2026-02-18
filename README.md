@@ -17,9 +17,13 @@
 - 💰 **Economic Optimization**: Price comparisons between branded (IFFCO, Chambal, Coromandel) and generic fertilizers
 - 🌍 **Environmental Stewardship**: Prioritizes organic and eco-friendly alternatives (Bhoomi Raksha principle)
 - 📊 **Growth Stage Optimization**: Tailored N-P-K recommendations for each crop phase
+- 🎙️ **Voice API Integration**: Multi-provider voice assistant support with automatic fallback (Bharati & Legacy)
 - ⚡ **Zero Dependencies**: Pure Python implementation with no external requirements
 
 ## 🚀 Quick Start
+
+> **Important:** This is a **Python Flask web application**, not a Node.js app. 
+> Use `python` and `pip` commands, not `npm` or `yarn`.
 
 ### Installation
 
@@ -31,14 +35,28 @@ cd Jai_Kisan
 # For CLI only - no installation needed (uses only Python standard library)
 # For Web Application - install dependencies
 pip install -r requirements.txt
+
+# Configure environment (copy and edit .env file)
+cp .env.example .env
 ```
 
+**📘 New to deployment? See [SETUP.md](SETUP.md) for detailed step-by-step instructions.**
+
 ### Usage
+
+**Quick Start Script (Easiest):**
+```bash
+chmod +x start.sh
+./start.sh
+# Automatically sets up environment and starts the app
+```
 
 **Web Application (Recommended):**
 ```bash
 python app.py
 # Visit http://localhost:5000 in your browser
+# To run on a different port (e.g., 3050):
+# Add PORT=3050 to your .env file
 ```
 
 Features:
@@ -68,7 +86,15 @@ print(response)
 
 ## 📖 Documentation
 
+
+- **[SETUP.md](SETUP.md)** - **NEW!** Step-by-step local deployment guide
+- **[DEPLOYMENT.md](DEPLOYMENT.md)** - Production deployment with DNS configuration
+- **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** - **NEW!** Common issues and solutions
+- **[DOCUMENTATION.md](DOCUMENTATION.md)** - Full feature guide and API reference
+
 - **[Complete Documentation](DOCUMENTATION.md)** - Full feature guide and API reference
+- **[Voice API Documentation](voice_api/README.md)** - Voice assistant integration guide
+
 - **[System Prompt](system_prompt.md)** - Complete system requirements and persona definition
 - **[Example Usage](examples/example_usage.md)** - Detailed scenarios and code examples
 
@@ -98,6 +124,14 @@ Saves farmers money through:
 - Multilingual support framework
 - Clear, actionable advice in simple language
 - "Digital Village Elder" persona - wise, approachable, practical
+
+### 5. **Voice API Integration**
+- Flexible multi-provider voice assistant support
+- **Bharati Voice API**: Modern Bharat-VISTAAR 2026 platform with 15+ Indian languages
+- **Legacy Voice API**: Traditional voice platform for established infrastructure
+- Automatic provider selection based on region, user preference, or configuration
+- Automatic fallback mechanism ensures reliability
+- See [Voice API Documentation](voice_api/README.md) for details
 
 ## 📊 Supported Crops
 
