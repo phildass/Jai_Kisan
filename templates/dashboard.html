@@ -59,6 +59,36 @@
             </form>
         </div>
 
+        <!-- Voice API Settings Card -->
+        <div class="recommendation-form-card" style="margin-top: 30px;">
+            <h2>🎙️ Voice Assistant Settings</h2>
+            <p style="color: #666; margin-bottom: 20px;">Choose your preferred voice assistant provider</p>
+            
+            <div style="display: flex; gap: 15px; margin-bottom: 20px;">
+                <div style="flex: 1; padding: 15px; border: 2px solid #ddd; border-radius: 8px; cursor: pointer;" 
+                     id="bharatiOption" onclick="selectVoiceProvider('bharati')">
+                    <h3 style="margin-top: 0;">🇮🇳 Bharati Voice (Bharat-VISTAAR)</h3>
+                    <p style="font-size: 14px; color: #666; margin-bottom: 10px;">
+                        Government platform • 15+ Indian languages • Modern features
+                    </p>
+                    <span class="badge badge-success" id="bharatiSelected" style="display: none;">Selected</span>
+                </div>
+                
+                <div style="flex: 1; padding: 15px; border: 2px solid #ddd; border-radius: 8px; cursor: pointer;" 
+                     id="legacyOption" onclick="selectVoiceProvider('legacy')">
+                    <h3 style="margin-top: 0;">📞 Legacy Voice</h3>
+                    <p style="font-size: 14px; color: #666; margin-bottom: 10px;">
+                        Traditional platform • 2 languages • Established infrastructure
+                    </p>
+                    <span class="badge badge-success" id="legacySelected" style="display: none;">Selected</span>
+                </div>
+            </div>
+            
+            <div id="voiceApiStatus" style="padding: 10px; background: #f5f5f5; border-radius: 5px; font-size: 14px;">
+                Status: Loading...
+            </div>
+        </div>
+
         <div id="recommendationResult" class="recommendation-result" style="display: none;">
             <div class="result-header">
                 <h2>Your Fertilizer Recommendation</h2>
@@ -152,5 +182,70 @@ document.getElementById('recommendationForm').addEventListener('submit', async f
 function printRecommendation() {
     window.print();
 }
+
+// Voice API preference handling
+let currentVoicePreference = {{ current_user.voice_api_preference|tojson }};
+
+function selectVoiceProvider(provider) {
+    // Update UI
+    document.getElementById('bharatiOption').style.borderColor = provider === 'bharati' ? '#4CAF50' : '#ddd';
+    document.getElementById('bharatiOption').style.backgroundColor = provider === 'bharati' ? '#f0f8f0' : 'white';
+    document.getElementById('bharatiSelected').style.display = provider === 'bharati' ? 'inline-block' : 'none';
+    
+    document.getElementById('legacyOption').style.borderColor = provider === 'legacy' ? '#4CAF50' : '#ddd';
+    document.getElementById('legacyOption').style.backgroundColor = provider === 'legacy' ? '#f0f8f0' : 'white';
+    document.getElementById('legacySelected').style.display = provider === 'legacy' ? 'inline-block' : 'none';
+    
+    // Save preference
+    if (provider !== currentVoicePreference) {
+        saveVoicePreference(provider);
+    }
+}
+
+async function saveVoicePreference(provider) {
+    try {
+        const response = await fetch('/api/voice/preference', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ preference: provider })
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+            currentVoicePreference = provider;
+            updateVoiceStatus();
+        }
+    } catch (error) {
+        console.error('Error saving voice preference:', error);
+    }
+}
+
+async function updateVoiceStatus() {
+    try {
+        const response = await fetch('/api/voice/status');
+        const data = await response.json();
+        
+        let statusHtml = `<strong>Status:</strong> `;
+        statusHtml += `Default Provider: <strong>${data.default_provider}</strong> | `;
+        statusHtml += `Your State: ${data.user_state} | `;
+        statusHtml += `Your Preference: <strong>${data.user_preference}</strong>`;
+        
+        document.getElementById('voiceApiStatus').innerHTML = statusHtml;
+        
+        // Initialize selection
+        selectVoiceProvider(data.user_preference);
+    } catch (error) {
+        document.getElementById('voiceApiStatus').innerHTML = 
+            '<span style="color: red;">Error loading status</span>';
+    }
+}
+
+// Load voice status on page load
+document.addEventListener('DOMContentLoaded', function() {
+    updateVoiceStatus();
+});
+
 </script>
 {% endblock %}

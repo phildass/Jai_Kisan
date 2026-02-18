@@ -158,7 +158,10 @@ class VoiceAPIFactory:
                 fallback_provider = self._providers[fallback_name]
                 
                 if fallback_provider.check_availability():
-                    print(f"Primary provider '{selected_provider}' unavailable, using fallback '{fallback_name}'")
+                    # Log fallback usage (in production, use logging module)
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.info(f"Primary provider '{selected_provider}' unavailable, using fallback '{fallback_name}'")
                     return fallback_provider
         
         return provider
@@ -230,7 +233,11 @@ class VoiceAPIFactory:
             fallback_name = 'legacy' if provider.provider_name == 'bharati' else 'bharati'
             fallback_provider = self._providers[fallback_name]
             
-            print(f"Primary provider failed, attempting fallback to '{fallback_name}'")
+            # Log fallback attempt (in production, use logging module)
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Primary provider failed, attempting fallback to '{fallback_name}'")
+            
             result = fallback_provider.send_voice_answer(query, farmer_profile)
             result['fallback_used'] = True
             result['primary_provider'] = provider.provider_name
