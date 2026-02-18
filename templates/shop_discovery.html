@@ -1,0 +1,806 @@
+{% extends "base.html" %}
+
+{% block title %}Shop Discovery - (J)ai Kisan{% endblock %}
+
+{% block content %}
+<div class="shop-discovery-page">
+    <div class="container">
+        <div class="page-header">
+            <h1>🏪 Local Shop Discovery</h1>
+            <p class="tagline">Find nearby agro-retailers with live stock information</p>
+        </div>
+
+        <!-- Search and Filter Section -->
+        <div class="search-section card">
+            <h3>Find Shops Near You</h3>
+            <div class="search-controls">
+                <button onclick="getMyLocation()" class="btn btn-primary">
+                    📍 Use My Location
+                </button>
+                <select id="radiusSelect" class="form-control">
+                    <option value="10">Within 10 km</option>
+                    <option value="25" selected>Within 25 km</option>
+                    <option value="50">Within 50 km</option>
+                    <option value="100">Within 100 km</option>
+                </select>
+                <button onclick="searchShops()" class="btn btn-secondary">
+                    🔍 Search Shops
+                </button>
+            </div>
+            <div id="locationStatus" class="location-status"></div>
+        </div>
+
+        <!-- View Toggle -->
+        <div class="view-toggle">
+            <button onclick="showListView()" class="btn btn-outline active" id="listViewBtn">
+                📋 List View
+            </button>
+            <button onclick="showMapView()" class="btn btn-outline" id="mapViewBtn">
+                🗺️ Map View
+            </button>
+        </div>
+
+        <!-- List View -->
+        <div id="listView" class="shops-list">
+            <div id="shopsContainer" class="shops-container">
+                <div class="loading-message">
+                    <p>Click "Use My Location" or "Search Shops" to find nearby retailers</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Map View (placeholder for now) -->
+        <div id="mapView" class="map-view" style="display: none;">
+            <div class="map-placeholder">
+                <p>🗺️ Map view will show shop locations</p>
+                <p class="note">Map integration coming soon. Use List View to see shop details.</p>
+            </div>
+        </div>
+
+        <!-- Price Comparison Tool -->
+        <div class="price-comparison-section card">
+            <h3>💰 Price Comparison - Branded vs Kifayati Options</h3>
+            <p>Compare prices and save money with economical alternatives</p>
+            
+            <div class="comparison-controls">
+                <select id="fertilizerTypeSelect" class="form-control">
+                    <option value="">Select Fertilizer Type...</option>
+                    <option value="Urea">Urea (46-0-0)</option>
+                    <option value="DAP">DAP (18-46-0)</option>
+                    <option value="MOP">MOP (0-0-60)</option>
+                    <option value="NPK 10:26:26">NPK 10:26:26</option>
+                    <option value="NPK 20:20:0:13">NPK 20:20:0:13</option>
+                </select>
+                <button onclick="comparePrices()" class="btn btn-success">
+                    Compare Prices
+                </button>
+            </div>
+            
+            <div id="priceComparisonResult" class="comparison-result" style="display: none;"></div>
+        </div>
+
+        <!-- Dosage Calculator -->
+        <div class="dosage-calculator-section card">
+            <h3>🧮 AI Dosage Calculator</h3>
+            <p>Calculate exact fertilizer requirements - don't overspend!</p>
+            
+            <form id="dosageForm" class="dosage-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Crop</label>
+                        <select id="dosageCrop" class="form-control" required>
+                            <option value="">Select Crop...</option>
+                            <option value="Paddy (Rice)">Paddy (Rice)</option>
+                            <option value="Wheat">Wheat</option>
+                            <option value="Cotton">Cotton</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Area (Hectares)</label>
+                        <input type="number" id="dosageArea" class="form-control" 
+                               step="0.1" min="0.1" value="1.0" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Growth Stage</label>
+                        <select id="dosageStage" class="form-control" required>
+                            <option value="">Select Stage...</option>
+                            <option value="Field Preparation (Basal Dose)">Field Preparation (Basal Dose)</option>
+                            <option value="Vegetative Phase (Leaves/Stem growth)">Vegetative Phase</option>
+                            <option value="Flowering/Reproductive Phase">Flowering/Reproductive Phase</option>
+                        </select>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary">Calculate Dosage</button>
+            </form>
+            
+            <div id="dosageResult" class="dosage-result" style="display: none;"></div>
+        </div>
+
+        <!-- Group Buying Section -->
+        <div class="group-buying-section card">
+            <h3>👥 Kisan Group Buying</h3>
+            <p>Join with fellow farmers for bulk discounts!</p>
+            
+            <form id="groupBuyingForm" class="group-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Fertilizer Type</label>
+                        <select id="groupFertilizer" class="form-control" required>
+                            <option value="">Select Fertilizer...</option>
+                            <option value="Urea">Urea</option>
+                            <option value="DAP">DAP</option>
+                            <option value="MOP">MOP</option>
+                            <option value="NPK 10:26:26">NPK 10:26:26</option>
+                            <option value="NPK 20:20:0:13">NPK 20:20:0:13</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Bags Needed</label>
+                        <input type="number" id="groupBags" class="form-control" 
+                               min="1" value="5" required>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-success">Join/Create Group</button>
+            </form>
+            
+            <div id="groupBuyingResult" class="group-result" style="display: none;"></div>
+        </div>
+
+        <!-- Kisan Points Display -->
+        <div class="kisan-points-display">
+            <h4>🏆 Your Kisan Points: <span id="kisanPoints">{{ current_user.kisan_points }}</span></h4>
+            <p class="small">Earn points by reporting shop status, joining group purchases, and helping fellow farmers!</p>
+        </div>
+    </div>
+</div>
+
+<style>
+.shop-discovery-page {
+    padding: 20px 0;
+}
+
+.page-header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.page-header h1 {
+    color: #2e7d32;
+    font-size: 2.5em;
+    margin-bottom: 10px;
+}
+
+.card {
+    background: white;
+    border-radius: 12px;
+    padding: 25px;
+    margin-bottom: 25px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.search-section h3 {
+    color: #2e7d32;
+    margin-bottom: 20px;
+}
+
+.search-controls {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.search-controls .form-control {
+    flex: 1;
+    min-width: 150px;
+    padding: 12px;
+    font-size: 16px;
+}
+
+.location-status {
+    margin-top: 15px;
+    padding: 10px;
+    border-radius: 6px;
+    font-weight: 500;
+}
+
+.location-status.success {
+    background: #e8f5e9;
+    color: #2e7d32;
+}
+
+.location-status.error {
+    background: #ffebee;
+    color: #c62828;
+}
+
+.view-toggle {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    justify-content: center;
+}
+
+.btn-outline {
+    background: white;
+    border: 2px solid #4caf50;
+    color: #4caf50;
+}
+
+.btn-outline.active {
+    background: #4caf50;
+    color: white;
+}
+
+.shops-container {
+    display: grid;
+    gap: 20px;
+}
+
+.shop-card {
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    padding: 20px;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.shop-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.shop-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    margin-bottom: 15px;
+}
+
+.shop-info h4 {
+    color: #2e7d32;
+    margin: 0 0 5px 0;
+    font-size: 1.4em;
+}
+
+.distance-badge {
+    background: #4caf50;
+    color: white;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.9em;
+}
+
+.shop-details {
+    color: #666;
+    line-height: 1.8;
+    margin-bottom: 15px;
+}
+
+.shop-inventory {
+    background: #f5f5f5;
+    padding: 15px;
+    border-radius: 8px;
+    margin: 15px 0;
+}
+
+.inventory-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+    margin-top: 10px;
+}
+
+.inventory-item {
+    background: white;
+    padding: 10px;
+    border-radius: 6px;
+    text-align: center;
+}
+
+.inventory-item strong {
+    display: block;
+    color: #2e7d32;
+    font-size: 1.1em;
+    margin-bottom: 5px;
+}
+
+.stock-high {
+    color: #4caf50;
+    font-weight: 600;
+}
+
+.stock-low {
+    color: #ff9800;
+    font-weight: 600;
+}
+
+.stock-out {
+    color: #f44336;
+    font-weight: 600;
+}
+
+.shop-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 15px;
+}
+
+.btn-call {
+    background: #4caf50;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.btn-report {
+    background: #2196f3;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.crowd-status {
+    background: #e3f2fd;
+    padding: 8px 12px;
+    border-radius: 6px;
+    margin-top: 10px;
+    font-size: 0.9em;
+    color: #1976d2;
+}
+
+.comparison-result, .dosage-result, .group-result {
+    margin-top: 20px;
+    padding: 20px;
+    background: #f5f5f5;
+    border-radius: 8px;
+}
+
+.price-comparison {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-top: 15px;
+}
+
+.price-option {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.price-option.kifayati {
+    border: 3px solid #4caf50;
+    position: relative;
+}
+
+.kifayati-badge {
+    position: absolute;
+    top: -15px;
+    right: 10px;
+    background: #4caf50;
+    color: white;
+    padding: 5px 15px;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.9em;
+}
+
+.price-amount {
+    font-size: 2em;
+    color: #2e7d32;
+    font-weight: bold;
+    margin: 10px 0;
+}
+
+.savings-highlight {
+    background: #fff3e0;
+    padding: 15px;
+    border-radius: 8px;
+    margin-top: 15px;
+    text-align: center;
+}
+
+.savings-highlight .amount {
+    font-size: 1.8em;
+    color: #ff6f00;
+    font-weight: bold;
+}
+
+.dosage-summary {
+    background: white;
+    padding: 15px;
+    border-radius: 8px;
+    margin-top: 15px;
+}
+
+.dosage-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.group-progress {
+    margin-top: 15px;
+}
+
+.progress-bar {
+    background: #e0e0e0;
+    height: 30px;
+    border-radius: 15px;
+    overflow: hidden;
+    margin: 10px 0;
+}
+
+.progress-fill {
+    background: #4caf50;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 600;
+    transition: width 0.3s;
+}
+
+.kisan-points-display {
+    text-align: center;
+    padding: 20px;
+    background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+    border-radius: 12px;
+    margin-top: 30px;
+}
+
+.kisan-points-display h4 {
+    margin: 0;
+    font-size: 1.5em;
+    color: #333;
+}
+
+.map-placeholder {
+    background: #f5f5f5;
+    padding: 60px 20px;
+    text-align: center;
+    border-radius: 8px;
+    border: 2px dashed #ccc;
+}
+
+@media (max-width: 768px) {
+    .price-comparison {
+        grid-template-columns: 1fr;
+    }
+    
+    .search-controls {
+        flex-direction: column;
+    }
+    
+    .search-controls .form-control,
+    .search-controls .btn {
+        width: 100%;
+    }
+}
+</style>
+
+<script>
+let userLocation = null;
+
+function getMyLocation() {
+    const statusDiv = document.getElementById('locationStatus');
+    
+    if (!navigator.geolocation) {
+        statusDiv.className = 'location-status error';
+        statusDiv.textContent = '❌ Geolocation is not supported by your browser';
+        return;
+    }
+    
+    statusDiv.className = 'location-status';
+    statusDiv.textContent = '📍 Getting your location...';
+    
+    navigator.geolocation.getCurrentPosition(
+        (position) => {
+            userLocation = {
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude
+            };
+            statusDiv.className = 'location-status success';
+            statusDiv.textContent = `✅ Location found! (${userLocation.latitude.toFixed(4)}, ${userLocation.longitude.toFixed(4)})`;
+            searchShops();
+        },
+        (error) => {
+            statusDiv.className = 'location-status error';
+            statusDiv.textContent = '❌ Unable to get location. Using your registered state instead.';
+            searchShops();
+        }
+    );
+}
+
+function searchShops() {
+    const radius = document.getElementById('radiusSelect').value;
+    const container = document.getElementById('shopsContainer');
+    
+    container.innerHTML = '<div class="loading-message"><p>🔍 Searching for shops...</p></div>';
+    
+    const requestData = {
+        radius: parseInt(radius),
+        state: '{{ current_user.state }}'
+    };
+    
+    if (userLocation) {
+        requestData.latitude = userLocation.latitude;
+        requestData.longitude = userLocation.longitude;
+    }
+    
+    fetch('/api/shops/nearby', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        displayShops(data.shops);
+    })
+    .catch(error => {
+        container.innerHTML = '<div class="loading-message"><p>❌ Error loading shops. Please try again.</p></div>';
+        console.error('Error:', error);
+    });
+}
+
+function displayShops(shops) {
+    const container = document.getElementById('shopsContainer');
+    
+    if (shops.length === 0) {
+        container.innerHTML = '<div class="loading-message"><p>No shops found in your area. Try increasing the search radius.</p></div>';
+        return;
+    }
+    
+    container.innerHTML = shops.map(shop => `
+        <div class="shop-card">
+            <div class="shop-header">
+                <div class="shop-info">
+                    <h4>${shop.name}</h4>
+                    <p style="margin: 0; color: #666;">Owner: ${shop.owner}</p>
+                </div>
+                ${shop.distance_km ? `<div class="distance-badge">${shop.distance_km} km</div>` : ''}
+            </div>
+            
+            <div class="shop-details">
+                <p>📍 ${shop.address}</p>
+                <p>📞 ${shop.mobile}</p>
+                <p>⭐ Rating: ${shop.rating}/5.0 (${shop.total_reports} reports)</p>
+            </div>
+            
+            <div class="shop-inventory">
+                <strong>Live Stock Status:</strong>
+                <div class="inventory-grid">
+                    ${Object.entries(shop.inventory).map(([fert, data]) => `
+                        <div class="inventory-item">
+                            <strong>${fert}</strong>
+                            <div class="${getStockClass(data.stock_bags)}">
+                                ${data.stock_bags} bags
+                            </div>
+                            <div>₹${data.price_per_50kg}/50kg</div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+            
+            <div class="crowd-status">
+                ✅ Recently confirmed by ${shop.total_reports} fellow farmers
+            </div>
+            
+            <div class="shop-actions">
+                <a href="tel:${shop.mobile}" class="btn-call">📞 Call Now</a>
+                <button onclick="reportShopStatus('${shop.id}')" class="btn-report">
+                    📝 Report Status
+                </button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function getStockClass(stock) {
+    if (stock > 100) return 'stock-high';
+    if (stock > 20) return 'stock-medium';
+    if (stock > 0) return 'stock-low';
+    return 'stock-out';
+}
+
+function reportShopStatus(shopId) {
+    const reportType = prompt('Report type:\n1. Stock Available\n2. Shop Closed\n3. Price Update\n\nEnter 1, 2, or 3:');
+    
+    const types = {
+        '1': 'stock_available',
+        '2': 'shop_closed',
+        '3': 'price_update'
+    };
+    
+    if (!types[reportType]) {
+        alert('Invalid selection');
+        return;
+    }
+    
+    fetch('/api/crowdsource/report', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            shop_id: shopId,
+            report_type: types[reportType]
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        alert(data.message);
+        document.getElementById('kisanPoints').textContent = data.total_points;
+    })
+    .catch(error => console.error('Error:', error));
+}
+
+function comparePrices() {
+    const fertType = document.getElementById('fertilizerTypeSelect').value;
+    if (!fertType) {
+        alert('Please select a fertilizer type');
+        return;
+    }
+    
+    fetch(`/api/price-comparison?type=${fertType}`)
+    .then(response => response.json())
+    .then(data => {
+        const resultDiv = document.getElementById('priceComparisonResult');
+        resultDiv.style.display = 'block';
+        resultDiv.innerHTML = `
+            <h4>Price Comparison for ${data.fertilizer_type}</h4>
+            <p><strong>Active Ingredient (Salt):</strong> ${data.salt} (${data.npk})</p>
+            
+            <div class="price-comparison">
+                <div class="price-option">
+                    <h5>Branded Average</h5>
+                    <div class="price-amount">₹${data.branded_average}</div>
+                    <p>per 50kg bag</p>
+                </div>
+                
+                <div class="price-option kifayati">
+                    <div class="kifayati-badge">Kifayati Option</div>
+                    <h5>${data.kifayati_option.name}</h5>
+                    <div class="price-amount">₹${data.kifayati_option.price_per_50kg}</div>
+                    <p>per 50kg bag</p>
+                </div>
+            </div>
+            
+            <div class="savings-highlight">
+                <p>💰 <strong>You Save:</strong></p>
+                <div class="amount">₹${data.savings} per bag!</div>
+                <p>Same salt (${data.salt}), better price!</p>
+            </div>
+        `;
+    })
+    .catch(error => console.error('Error:', error));
+}
+
+document.getElementById('dosageForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const crop = document.getElementById('dosageCrop').value;
+    const area = document.getElementById('dosageArea').value;
+    const stage = document.getElementById('dosageStage').value;
+    
+    fetch('/api/dosage-calculator', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            crop: crop,
+            area_hectares: parseFloat(area),
+            growth_stage: stage
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        const resultDiv = document.getElementById('dosageResult');
+        resultDiv.style.display = 'block';
+        
+        let bagsHtml = '';
+        for (const [fert, info] of Object.entries(data.bags_needed)) {
+            bagsHtml += `
+                <div class="dosage-item">
+                    <span><strong>${fert}</strong></span>
+                    <span>
+                        ${info.kg_required} kg 
+                        (Buy ${info.bags_to_buy} bags of 50kg)
+                    </span>
+                </div>
+            `;
+        }
+        
+        resultDiv.innerHTML = `
+            <h4>Dosage Recommendation</h4>
+            <p>${data.recommendation}</p>
+            <div class="dosage-summary">
+                ${bagsHtml}
+            </div>
+            <p class="note">💡 Don't waste money on larger pack sizes! Buy exactly what you need.</p>
+        `;
+    })
+    .catch(error => console.error('Error:', error));
+});
+
+document.getElementById('groupBuyingForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const fertilizer = document.getElementById('groupFertilizer').value;
+    const bags = document.getElementById('groupBags').value;
+    
+    fetch('/api/group-buying/create', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            fertilizer_type: fertilizer,
+            bags_requested: parseInt(bags)
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        const resultDiv = document.getElementById('groupBuyingResult');
+        resultDiv.style.display = 'block';
+        
+        const progressPercent = Math.min(100, (data.total_bags / 50) * 100);
+        
+        resultDiv.innerHTML = `
+            <h4>✅ Successfully Joined Group!</h4>
+            <p>You earned ${data.points_earned} Kisan Points!</p>
+            
+            <div class="group-progress">
+                <p><strong>Group Status:</strong></p>
+                <p>Total Bags: ${data.total_bags} | Farmers: ${data.farmer_count}</p>
+                
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: ${progressPercent}%">
+                        ${Math.round(progressPercent)}%
+                    </div>
+                </div>
+                
+                ${data.threshold_met ? 
+                    '<p class="success">🎉 Threshold met! Shop will be contacted for bulk discount.</p>' :
+                    '<p>Keep inviting farmers to reach the threshold for bulk discount!</p>'
+                }
+            </div>
+        `;
+        
+        document.getElementById('kisanPoints').textContent = parseInt(document.getElementById('kisanPoints').textContent) + data.points_earned;
+    })
+    .catch(error => console.error('Error:', error));
+});
+
+function showListView() {
+    document.getElementById('listView').style.display = 'block';
+    document.getElementById('mapView').style.display = 'none';
+    document.getElementById('listViewBtn').classList.add('active');
+    document.getElementById('mapViewBtn').classList.remove('active');
+}
+
+function showMapView() {
+    document.getElementById('listView').style.display = 'none';
+    document.getElementById('mapView').style.display = 'block';
+    document.getElementById('listViewBtn').classList.remove('active');
+    document.getElementById('mapViewBtn').classList.add('active');
+}
+</script>
+{% endblock %}
