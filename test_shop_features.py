@@ -94,7 +94,7 @@ def test_dosage_calculator():
         for fert_key, amount_per_ha in rules.items():
             if fert_key != 'area_factor':
                 total_kg = amount_per_ha * area
-                bags_needed = int((total_kg / 50) + 0.99)  # Round up
+                bags_needed = math.ceil(total_kg / 50)
                 fert_name = fert_key.replace('_kg', '').upper()
                 
                 print(f"  - {fert_name}: {total_kg} kg ({bags_needed} bags of 50kg)")

@@ -69,7 +69,6 @@ class User(UserMixin, db.Model):
     def add_kisan_points(self, points, reason):
         """Add Kisan Points to user for contributions"""
         self.kisan_points += points
-        db.session.commit()
 
 
 class Shop(db.Model):
@@ -454,7 +453,6 @@ def shop_discovery():
 def get_nearby_shops():
     """Get nearby shops based on location"""
     from data.shop_data import SAMPLE_SHOPS
-    import math
     
     data = request.json
     user_lat = data.get('latitude')
