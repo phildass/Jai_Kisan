@@ -10,8 +10,12 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta
 import os
 import secrets
+from dotenv import load_dotenv
 from jai_kisan_agent import JaiKisanAgent
 from voice_api import get_voice_api, get_factory_instance
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -518,4 +522,5 @@ with app.app_context():
 if __name__ == '__main__':
     # Only enable debug mode in development (not in production)
     debug_mode = os.getenv('FLASK_ENV') == 'development'
-    app.run(debug=debug_mode, host='0.0.0.0', port=5000)
+    port = int(os.getenv('PORT', 5000))
+    app.run(debug=debug_mode, host='0.0.0.0', port=port)

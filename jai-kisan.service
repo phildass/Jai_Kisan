@@ -1,0 +1,26 @@
+[Unit]
+Description=(J)ai Kisan Web Application
+After=network.target
+
+[Service]
+Type=notify
+User=ubuntu
+Group=www-data
+WorkingDirectory=/home/ubuntu/Jai_Kisan
+Environment="PATH=/home/ubuntu/Jai_Kisan/venv/bin"
+EnvironmentFile=/home/ubuntu/Jai_Kisan/.env
+
+# Use Gunicorn for production
+ExecStart=/home/ubuntu/Jai_Kisan/venv/bin/gunicorn -c gunicorn_config.py app:app
+
+# Restart policy
+Restart=always
+RestartSec=10
+
+# Performance tuning
+LimitNOFILE=65536
+KillMode=mixed
+TimeoutStopSec=5
+
+[Install]
+WantedBy=multi-user.target
