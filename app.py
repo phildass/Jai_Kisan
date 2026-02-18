@@ -10,7 +10,11 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta
 import os
 import secrets
+
+import math
+
 from dotenv import load_dotenv
+
 from jai_kisan_agent import JaiKisanAgent
 from voice_api import get_voice_api, get_factory_instance
 
@@ -47,9 +51,13 @@ class User(UserMixin, db.Model):
     registration_date = db.Column(db.DateTime, default=datetime.utcnow)
     payment_status = db.Column(db.String(20), default='trial')  # trial, paid, expired
     payment_date = db.Column(db.DateTime)
+
+    kisan_points = db.Column(db.Integer, default=0)  # Gamification points
+
     # Voice API preference - new field for voice assistant provider selection
     # Default is 'bharati' for new users; existing users get NULL initially but UI defaults to 'bharati'
     voice_api_preference = db.Column(db.String(20), default='bharati')  # bharati, legacy
+
     
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -71,6 +79,80 @@ class User(UserMixin, db.Model):
         trial_end = self.registration_date + timedelta(hours=24)
         remaining = trial_end - datetime.utcnow()
         return max(0, remaining.total_seconds() / 3600)
+    
+    def add_kisan_points(self, points, reason):
+        """Add Kisan Points to user for contributions"""
+        self.kisan_points += points
+
+
+class Shop(db.Model):
+    """Shop/Retailer information"""
+    id = db.Column(db.Integer, primary_key=True)
+    shop_id = db.Column(db.String(50), unique=True, nullable=False)  # e-Urvarak ID
+    name = db.Column(db.String(200), nullable=False)
+    owner = db.Column(db.String(100))
+    mobile = db.Column(db.String(15))
+    address = db.Column(db.String(500))
+    district = db.Column(db.String(50))
+    state = db.Column(db.String(50))
+    latitude = db.Column(db.Float)
+    longitude = db.Column(db.Float)
+    license_number = db.Column(db.String(100))
+    is_verified = db.Column(db.Boolean, default=False)
+    rating = db.Column(db.Float, default=0.0)
+    last_updated = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class ShopInventory(db.Model):
+    """Shop inventory for fertilizers"""
+    id = db.Column(db.Integer, primary_key=True)
+    shop_id = db.Column(db.String(50), db.ForeignKey('shop.shop_id'), nullable=False)
+    fertilizer_type = db.Column(db.String(50), nullable=False)  # Urea, DAP, MOP, etc.
+    stock_bags = db.Column(db.Integer, default=0)
+    price_per_50kg = db.Column(db.Float)
+    last_updated = db.Column(db.DateTime, default=datetime.utcnow)
+    source = db.Column(db.String(20), default='api')  # api, crowdsourced
+
+
+class CrowdsourcedReport(db.Model):
+    """Farmer reports on shop status and stock"""
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    shop_id = db.Column(db.String(50), db.ForeignKey('shop.shop_id'), nullable=False)
+    report_type = db.Column(db.String(50), nullable=False)  # stock_available, shop_closed, price_update
+    fertilizer_type = db.Column(db.String(50))  # If reporting specific fertilizer
+    details = db.Column(db.String(500))
+    is_verified = db.Column(db.Boolean, default=False)
+    verification_count = db.Column(db.Integer, default=0)  # How many farmers confirmed this
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    points_awarded = db.Column(db.Integer, default=0)
+
+
+class GroupBuying(db.Model):
+    """Group buying aggregation"""
+    id = db.Column(db.Integer, primary_key=True)
+    fertilizer_type = db.Column(db.String(50), nullable=False)
+    village = db.Column(db.String(100))
+    district = db.Column(db.String(50))
+    state = db.Column(db.String(50))
+    total_bags_requested = db.Column(db.Integer, default=0)
+    farmer_count = db.Column(db.Integer, default=0)
+    status = db.Column(db.String(20), default='open')  # open, threshold_met, offer_sent, completed
+    target_shop_id = db.Column(db.String(50), db.ForeignKey('shop.shop_id'))
+    discount_offered = db.Column(db.Float, default=0.0)
+    final_price_per_bag = db.Column(db.Float)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    closes_at = db.Column(db.DateTime)
+
+
+class GroupBuyingParticipant(db.Model):
+    """Individual farmer participation in group buying"""
+    id = db.Column(db.Integer, primary_key=True)
+    group_id = db.Column(db.Integer, db.ForeignKey('group_buying.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    bags_requested = db.Column(db.Integer, nullable=False)
+    joined_at = db.Column(db.DateTime, default=datetime.utcnow)
+    is_confirmed = db.Column(db.Boolean, default=False)
 
 
 @login_manager.user_loader
@@ -367,6 +449,296 @@ def google_auth():
     # In production, implement Google OAuth flow
     flash('Google Sign-In is not yet implemented. Please use regular registration.', 'info')
     return redirect(url_for('register'))
+
+
+# Shop Discovery and Inventory Routes
+@app.route('/shops')
+@login_required
+def shop_discovery():
+    """Shop discovery page"""
+    if not current_user.is_trial_active() and current_user.payment_status != 'paid':
+        return redirect(url_for('payment'))
+    
+    return render_template('shop_discovery.html')
+
+
+@app.route('/api/shops/nearby', methods=['POST'])
+@login_required
+def get_nearby_shops():
+    """Get nearby shops based on location"""
+    from data.shop_data import SAMPLE_SHOPS
+    
+    data = request.json
+    user_lat = data.get('latitude')
+    user_lng = data.get('longitude')
+    radius_km = data.get('radius', 50)  # Default 50km radius
+    state = data.get('state', current_user.state)
+    
+    # Calculate distance for each shop
+    def calculate_distance(lat1, lon1, lat2, lon2):
+        """Calculate distance between two coordinates using Haversine formula"""
+        R = 6371  # Earth's radius in km
+        lat1, lon1, lat2, lon2 = map(math.radians, [lat1, lon1, lat2, lon2])
+        dlat = lat2 - lat1
+        dlon = lon2 - lon1
+        a = math.sin(dlat/2)**2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon/2)**2
+        c = 2 * math.asin(math.sqrt(a))
+        return R * c
+    
+    nearby_shops = []
+    
+    # Filter shops by state and calculate distance
+    for shop in SAMPLE_SHOPS:
+        if shop['state'] == state:
+            if user_lat and user_lng:
+                distance = calculate_distance(user_lat, user_lng, shop['latitude'], shop['longitude'])
+                if distance <= radius_km:
+                    shop_copy = shop.copy()
+                    shop_copy['distance_km'] = round(distance, 1)
+                    nearby_shops.append(shop_copy)
+            else:
+                # If no coordinates, return all shops in state
+                shop_copy = shop.copy()
+                shop_copy['distance_km'] = None
+                nearby_shops.append(shop_copy)
+    
+    # Sort by distance if available
+    if user_lat and user_lng:
+        nearby_shops.sort(key=lambda x: x['distance_km'])
+    
+    return jsonify({'shops': nearby_shops})
+
+
+@app.route('/api/shops/<shop_id>/inventory')
+@login_required
+def get_shop_inventory(shop_id):
+    """Get inventory for a specific shop"""
+    from data.shop_data import SAMPLE_SHOPS
+    
+    for shop in SAMPLE_SHOPS:
+        if shop['id'] == shop_id:
+            return jsonify({'inventory': shop['inventory'], 'shop': shop})
+    
+    return jsonify({'error': 'Shop not found'}), 404
+
+
+@app.route('/api/crowdsource/report', methods=['POST'])
+@login_required
+def submit_crowdsource_report():
+    """Submit crowdsourced report about shop/stock"""
+    from data.shop_data import KISAN_POINTS_REWARDS
+    
+    data = request.json
+    shop_id = data.get('shop_id')
+    report_type = data.get('report_type')  # stock_available, shop_closed, price_update
+    fertilizer_type = data.get('fertilizer_type')
+    details = data.get('details', '')
+    
+    # Create report
+    report = CrowdsourcedReport(
+        user_id=current_user.id,
+        shop_id=shop_id,
+        report_type=report_type,
+        fertilizer_type=fertilizer_type,
+        details=details
+    )
+    
+    # Award Kisan Points
+    points = KISAN_POINTS_REWARDS.get(f'report_{report_type}', 5)
+    report.points_awarded = points
+    
+    db.session.add(report)
+    current_user.add_kisan_points(points, f"Report: {report_type}")
+    
+    db.session.commit()
+    
+    return jsonify({
+        'success': True,
+        'points_earned': points,
+        'total_points': current_user.kisan_points,
+        'message': f'Thank you! You earned {points} Kisan Points.'
+    })
+
+
+@app.route('/api/price-comparison')
+@login_required
+def price_comparison():
+    """Get price comparison for branded vs kifayati options"""
+    from data.shop_data import KIFAYATI_ALTERNATIVES, BRAND_TO_SALT_MAPPING
+    
+    fertilizer_type = request.args.get('type')  # e.g., "DAP", "Urea"
+    
+    if fertilizer_type in KIFAYATI_ALTERNATIVES:
+        comparison = KIFAYATI_ALTERNATIVES[fertilizer_type]
+        return jsonify({
+            'fertilizer_type': fertilizer_type,
+            'salt': comparison['kifayati_option']['salt'],
+            'npk': comparison['kifayati_option']['npk'],
+            'branded_average': comparison['branded_average_price'],
+            'kifayati_option': comparison['kifayati_option'],
+            'savings': comparison['kifayati_option']['savings_per_bag']
+        })
+    
+    return jsonify({'error': 'Fertilizer type not found'}), 404
+
+
+@app.route('/api/dosage-calculator', methods=['POST'])
+@login_required
+def dosage_calculator():
+    """Calculate dosage based on crop, area, and growth stage"""
+    from data.shop_data import DOSAGE_CALCULATION_RULES
+    
+    data = request.json
+    crop = data.get('crop')
+    area_hectares = float(data.get('area_hectares', 1.0))
+    growth_stage = data.get('growth_stage')
+    
+    # Get dosage rules
+    crop_rules = DOSAGE_CALCULATION_RULES.get(crop, DOSAGE_CALCULATION_RULES['default'])
+    stage_rules = crop_rules.get(growth_stage, crop_rules.get('Field Preparation (Basal Dose)', {}))
+    
+    # Calculate dosages
+    dosages = {}
+    for fert_key, amount in stage_rules.items():
+        if fert_key != 'area_factor':
+            # Scale by area
+            dosages[fert_key] = round(amount * area_hectares, 2)
+    
+    # Calculate number of bags needed (50kg per bag)
+    bags_needed = {}
+    for fert_key, kg_amount in dosages.items():
+        if 'kg' in fert_key:
+            fert_type = fert_key.replace('_kg', '').upper()
+            bags_needed[fert_type] = {
+                'kg_required': kg_amount,
+                'bags_50kg': round(kg_amount / 50, 2),
+                'bags_to_buy': int(math.ceil(kg_amount / 50))  # Round up to whole bags
+            }
+    
+    return jsonify({
+        'crop': crop,
+        'area_hectares': area_hectares,
+        'growth_stage': growth_stage,
+        'dosages': dosages,
+        'bags_needed': bags_needed,
+        'recommendation': f"For {area_hectares} hectares of {crop} at {growth_stage}"
+    })
+
+
+@app.route('/api/group-buying/create', methods=['POST'])
+@login_required
+def create_group_buying():
+    """Create or join a group buying request"""
+    from data.shop_data import GROUP_BUYING_THRESHOLDS, KISAN_POINTS_REWARDS
+    
+    data = request.json
+    fertilizer_type = data.get('fertilizer_type')
+    bags_requested = int(data.get('bags_requested', 1))
+    village = data.get('village', current_user.district)
+    
+    # Check if there's an open group for this fertilizer in the area
+    existing_group = GroupBuying.query.filter_by(
+        fertilizer_type=fertilizer_type,
+        district=current_user.district,
+        status='open'
+    ).first()
+    
+    if existing_group:
+        # Join existing group
+        participant = GroupBuyingParticipant(
+            group_id=existing_group.id,
+            user_id=current_user.id,
+            bags_requested=bags_requested
+        )
+        db.session.add(participant)
+        
+        # Update group totals
+        existing_group.total_bags_requested += bags_requested
+        existing_group.farmer_count += 1
+        
+        # Award points
+        current_user.add_kisan_points(KISAN_POINTS_REWARDS['join_group_buying'], "Joined group buying")
+        
+        # Check if threshold is met
+        threshold = GROUP_BUYING_THRESHOLDS.get(fertilizer_type, {})
+        if (existing_group.total_bags_requested >= threshold.get('min_bags', 50) and
+            existing_group.farmer_count >= threshold.get('min_farmers', 5)):
+            existing_group.status = 'threshold_met'
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'group_id': existing_group.id,
+            'total_bags': existing_group.total_bags_requested,
+            'farmer_count': existing_group.farmer_count,
+            'threshold_met': existing_group.status == 'threshold_met',
+            'points_earned': KISAN_POINTS_REWARDS['join_group_buying']
+        })
+    else:
+        # Create new group
+        new_group = GroupBuying(
+            fertilizer_type=fertilizer_type,
+            village=village,
+            district=current_user.district,
+            state=current_user.state,
+            total_bags_requested=bags_requested,
+            farmer_count=1,
+            closes_at=datetime.utcnow() + timedelta(days=7)  # 7 days to form group
+        )
+        db.session.add(new_group)
+        db.session.flush()  # Get the group ID
+        
+        # Add as first participant
+        participant = GroupBuyingParticipant(
+            group_id=new_group.id,
+            user_id=current_user.id,
+            bags_requested=bags_requested
+        )
+        db.session.add(participant)
+        
+        # Award points
+        current_user.add_kisan_points(KISAN_POINTS_REWARDS['join_group_buying'], "Started group buying")
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'group_id': new_group.id,
+            'total_bags': new_group.total_bags_requested,
+            'farmer_count': new_group.farmer_count,
+            'threshold_met': False,
+            'points_earned': KISAN_POINTS_REWARDS['join_group_buying']
+        })
+
+
+@app.route('/api/group-buying/status/<int:group_id>')
+@login_required
+def get_group_buying_status(group_id):
+    """Get status of a group buying request"""
+    from data.shop_data import GROUP_BUYING_THRESHOLDS
+    
+    group = GroupBuying.query.get_or_404(group_id)
+    threshold = GROUP_BUYING_THRESHOLDS.get(group.fertilizer_type, {})
+    
+    return jsonify({
+        'group_id': group.id,
+        'fertilizer_type': group.fertilizer_type,
+        'total_bags': group.total_bags_requested,
+        'farmer_count': group.farmer_count,
+        'status': group.status,
+        'threshold': {
+            'min_bags': threshold.get('min_bags', 50),
+            'min_farmers': threshold.get('min_farmers', 5),
+            'discount_percent': threshold.get('discount_percent', 0)
+        },
+        'progress': {
+            'bags_percent': min(100, (group.total_bags_requested / threshold.get('min_bags', 50)) * 100),
+            'farmers_percent': min(100, (group.farmer_count / threshold.get('min_farmers', 5)) * 100)
+        },
+        'discount_offered': group.discount_offered,
+        'final_price': group.final_price_per_bag
+    })
 
 
 @app.route('/public/<path:filename>')
