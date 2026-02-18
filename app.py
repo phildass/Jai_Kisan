@@ -43,6 +43,8 @@ class User(UserMixin, db.Model):
     registration_date = db.Column(db.DateTime, default=datetime.utcnow)
     payment_status = db.Column(db.String(20), default='trial')  # trial, paid, expired
     payment_date = db.Column(db.DateTime)
+    # Voice API preference - new field for voice assistant provider selection
+    # Default is 'bharati' for new users; existing users get NULL initially but UI defaults to 'bharati'
     voice_api_preference = db.Column(db.String(20), default='bharati')  # bharati, legacy
     
     def set_password(self, password):

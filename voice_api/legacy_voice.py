@@ -1,6 +1,6 @@
 """
 Legacy Voice API Implementation for (J)ai Kisan
-Traditional voice assistant platform (pre-2026)
+Traditional voice assistant platform (earlier generation)
 """
 
 import os

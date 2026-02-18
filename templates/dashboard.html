@@ -184,7 +184,8 @@ function printRecommendation() {
 }
 
 // Voice API preference handling
-let currentVoicePreference = {{ current_user.voice_api_preference|tojson }};
+// Provide default value for backward compatibility with existing users
+let currentVoicePreference = {{ (current_user.voice_api_preference or 'bharati')|tojson }};
 
 function selectVoiceProvider(provider) {
     // Update UI
