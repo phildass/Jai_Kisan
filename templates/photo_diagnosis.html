@@ -1,0 +1,231 @@
+{% extends "base.html" %}
+
+{% block title %}Photo Doctor - (J)ai Kisan{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="mb-4">📸 Photo Doctor - Visual Diagnosis</h1>
+            <p class="lead">Take a photo of your crop problem for AI-powered diagnosis</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8 offset-lg-2">
+            <div class="alert alert-info">
+                <h6 class="alert-heading">📌 Tips for Best Results:</h6>
+                <ul class="mb-0">
+                    <li>Take photo in good lighting (avoid shadows)</li>
+                    <li>Focus on affected leaves/stems/fruits</li>
+                    <li>Include both damaged and healthy parts for comparison</li>
+                    <li>Take close-up photos (within 6-12 inches)</li>
+                    <li>Avoid blurry images</li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Upload Crop Photo</h5>
+                </div>
+                <div class="card-body">
+                    <form id="photoForm" enctype="multipart/form-data">
+                        <div class="mb-3">
+                            <label for="photoFile" class="form-label"><strong>Select Photo:</strong></label>
+                            <input class="form-control form-control-lg" type="file" id="photoFile" name="photo" 
+                                   accept="image/*" capture="environment" required>
+                            <small class="text-muted">Tap to take photo with camera or upload from gallery</small>
+                        </div>
+
+                        <div class="mb-3" id="previewSection" style="display: none;">
+                            <label class="form-label"><strong>Preview:</strong></label>
+                            <div class="text-center">
+                                <img id="photoPreview" src="" alt="Preview" class="img-fluid rounded border" 
+                                     style="max-height: 400px;">
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="cropName" class="form-label"><strong>Crop Name:</strong></label>
+                            <input type="text" class="form-control" id="cropName" name="crop" 
+                                   placeholder="e.g., Tomato, Cotton, Paddy" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="symptoms" class="form-label"><strong>What symptoms do you see?</strong></label>
+                            <textarea class="form-control" id="symptoms" name="symptoms" rows="3" 
+                                      placeholder="e.g., Yellow spots on leaves, brown edges, holes in fruits"></textarea>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                📸 Diagnose Problem
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Loading -->
+            <div id="loading" class="text-center mt-4" style="display: none;">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Analyzing...</span>
+                </div>
+                <p class="mt-2">AI is analyzing your photo...</p>
+            </div>
+
+            <!-- Results -->
+            <div id="results" class="mt-4" style="display: none;">
+                <div class="card">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0">🔍 Diagnosis Results</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="resultsContent"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Feature Note -->
+            <div class="alert alert-warning mt-4">
+                <h6 class="alert-heading">⚠️ Computer Vision Model - Coming Soon!</h6>
+                <p class="mb-2">
+                    The AI-powered photo diagnosis feature is under development. We are training our 
+                    TensorFlow Lite model on thousands of crop disease images to provide accurate diagnoses.
+                </p>
+                <p class="mb-0">
+                    <strong>In the meantime:</strong> Please use the <a href="/ipm-advisor" class="alert-link">IPM Advisor</a> 
+                    to describe your symptoms and get recommendations.
+                </p>
+            </div>
+
+            <!-- Manual Diagnosis Guide -->
+            <div class="card mt-3">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0">🔬 Quick Visual Diagnosis Guide</h6>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Symptom</th>
+                                <th>Likely Cause</th>
+                                <th>Check For</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Yellowing from bottom up</td>
+                                <td>Nitrogen deficiency</td>
+                                <td>Uniform yellowing, no spots</td>
+                            </tr>
+                            <tr>
+                                <td>Yellow with green veins</td>
+                                <td>Iron deficiency</td>
+                                <td>Young leaves affected first</td>
+                            </tr>
+                            <tr>
+                                <td>Brown leaf edges</td>
+                                <td>Potassium deficiency</td>
+                                <td>Scorching at margins</td>
+                            </tr>
+                            <tr>
+                                <td>Concentric rings on leaves</td>
+                                <td>Early Blight (Fungus)</td>
+                                <td>Target-like pattern, brown</td>
+                            </tr>
+                            <tr>
+                                <td>White powdery coating</td>
+                                <td>Powdery Mildew</td>
+                                <td>White dust-like growth</td>
+                            </tr>
+                            <tr>
+                                <td>Holes in leaves/fruits</td>
+                                <td>Caterpillar/Borer</td>
+                                <td>Entry holes, frass</td>
+                            </tr>
+                            <tr>
+                                <td>Leaf curling + honeydew</td>
+                                <td>Aphids/Whitefly</td>
+                                <td>Tiny insects underneath</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Preview uploaded photo
+document.getElementById('photoFile').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('photoPreview').src = e.target.result;
+            document.getElementById('previewSection').style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+    }
+});
+
+// Handle form submission
+document.getElementById('photoForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    
+    document.getElementById('loading').style.display = 'block';
+    document.getElementById('results').style.display = 'none';
+    
+    fetch('/photo-diagnosis', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        document.getElementById('loading').style.display = 'none';
+        
+        if (data.error) {
+            alert('Error: ' + data.error);
+            return;
+        }
+        
+        let resultsHtml = `
+            <div class="alert alert-info">
+                <h5>${data.diagnosis}</h5>
+                <p>${data.message}</p>
+            </div>
+        `;
+        
+        if (data.next_steps) {
+            resultsHtml += '<h6>Next Steps:</h6><ol>';
+            data.next_steps.forEach(step => {
+                resultsHtml += `<li>${step}</li>`;
+            });
+            resultsHtml += '</ol>';
+        }
+        
+        resultsHtml += `
+            <div class="d-grid gap-2 mt-3">
+                <a href="/ipm-advisor" class="btn btn-success">
+                    Go to IPM Advisor →
+                </a>
+            </div>
+        `;
+        
+        document.getElementById('resultsContent').innerHTML = resultsHtml;
+        document.getElementById('results').style.display = 'block';
+        
+        document.getElementById('results').scrollIntoView({ behavior: 'smooth' });
+    })
+    .catch(error => {
+        document.getElementById('loading').style.display = 'none';
+        console.error('Error:', error);
+        alert('Error uploading photo. Please try again.');
+    });
+});
+</script>
+{% endblock %}

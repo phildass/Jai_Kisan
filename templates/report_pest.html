@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+
+{% block title %}Report Pest/Disease - (J)ai Kisan{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="mb-4">🚨 Report Pest/Disease</h1>
+            <p class="lead">Help your fellow farmers by reporting pest/disease outbreaks</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8 offset-lg-2">
+            <div class="alert alert-success">
+                <h6 class="alert-heading">👥 Neighborhood Watch</h6>
+                <p class="mb-0">
+                    When you report a pest or disease, nearby farmers (within 5km) will be automatically 
+                    alerted if multiple reports come in for the same problem. This helps the community 
+                    take preventive action early!
+                </p>
+            </div>
+
+            <div class="card">
+                <div class="card-header bg-warning">
+                    <h5 class="mb-0">Submit Report</h5>
+                </div>
+                <div class="card-body">
+                    <form id="reportForm">
+                        <div class="mb-3">
+                            <label for="crop" class="form-label"><strong>1. Crop:</strong></label>
+                            <select class="form-select" id="crop" name="crop" required>
+                                <option value="">-- Select Crop --</option>
+                                {% for crop in crops %}
+                                <option value="{{ crop }}">{{ crop }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="pestDiseaseName" class="form-label"><strong>2. Pest/Disease Name:</strong></label>
+                            <input type="text" class="form-control" id="pestDiseaseName" name="pest_disease_name" 
+                                   placeholder="e.g., Pink Bollworm, Blast, Aphid" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="pestDiseaseType" class="form-label"><strong>3. Type:</strong></label>
+                            <select class="form-select" id="pestDiseaseType" name="pest_disease_type" required>
+                                <option value="">-- Select Type --</option>
+                                <option value="pest">Pest (Insect)</option>
+                                <option value="disease">Disease (Fungal/Bacterial/Viral)</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="severity" class="form-label"><strong>4. Severity:</strong></label>
+                            <select class="form-select" id="severity" name="severity" required>
+                                <option value="">-- Select Severity --</option>
+                                <option value="low">Low (Just appeared, <10% affected)</option>
+                                <option value="medium">Medium (10-30% affected)</option>
+                                <option value="high">High (30-50% affected)</option>
+                                <option value="critical">Critical (>50% affected)</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="pestCount" class="form-label"><strong>5. Pest Count (if applicable):</strong></label>
+                            <input type="text" class="form-control" id="pestCount" name="pest_count" 
+                                   placeholder="e.g., 5-10 per leaf, 20% area affected">
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="symptoms" class="form-label"><strong>6. Symptoms:</strong></label>
+                            <textarea class="form-control" id="symptoms" name="symptoms" rows="3" 
+                                      placeholder="Describe what you see..."></textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="useLocation" checked>
+                                <label class="form-check-label" for="useLocation">
+                                    Share my location to help nearby farmers
+                                </label>
+                            </div>
+                            <small class="text-muted">Your exact location won't be shared, only district-level information</small>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-warning btn-lg">
+                                Submit Report
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Loading -->
+            <div id="loading" class="text-center mt-4" style="display: none;">
+                <div class="spinner-border text-warning" role="status">
+                    <span class="visually-hidden">Submitting...</span>
+                </div>
+                <p class="mt-2">Submitting your report...</p>
+            </div>
+
+            <!-- Success Message -->
+            <div id="success" class="mt-4" style="display: none;">
+                <div class="alert alert-success" role="alert">
+                    <h5 class="alert-heading">✓ Report Submitted Successfully!</h5>
+                    <p id="successMessage"></p>
+                    <hr>
+                    <p class="mb-0">
+                        <a href="/ipm-advisor" class="btn btn-success">Get IPM Recommendations</a>
+                        <a href="/marketplace" class="btn btn-info ms-2">Find Treatment Products</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Handle form submission
+document.getElementById('reportForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = {
+        crop: document.getElementById('crop').value,
+        pest_disease_name: document.getElementById('pestDiseaseName').value,
+        pest_disease_type: document.getElementById('pestDiseaseType').value,
+        severity: document.getElementById('severity').value,
+        pest_count: document.getElementById('pestCount').value,
+        symptoms: document.getElementById('symptoms').value
+    };
+    
+    // Get location if checkbox is checked
+    if (document.getElementById('useLocation').checked) {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    formData.latitude = position.coords.latitude;
+                    formData.longitude = position.coords.longitude;
+                    submitReport(formData);
+                },
+                function(error) {
+                    // If location permission denied, submit without location
+                    submitReport(formData);
+                }
+            );
+        } else {
+            submitReport(formData);
+        }
+    } else {
+        submitReport(formData);
+    }
+});
+
+function submitReport(formData) {
+    document.getElementById('loading').style.display = 'block';
+    document.getElementById('success').style.display = 'none';
+    
+    fetch('/report-pest', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        document.getElementById('loading').style.display = 'none';
+        
+        if (data.error) {
+            alert('Error: ' + data.error);
+            return;
+        }
+        
+        if (data.success) {
+            document.getElementById('successMessage').textContent = data.message;
+            document.getElementById('success').style.display = 'block';
+            document.getElementById('reportForm').reset();
+            document.getElementById('success').scrollIntoView({ behavior: 'smooth' });
+        }
+    })
+    .catch(error => {
+        document.getElementById('loading').style.display = 'none';
+        console.error('Error:', error);
+        alert('Error submitting report. Please try again.');
+    });
+}
+</script>
+{% endblock %}
