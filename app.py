@@ -12,6 +12,7 @@ import os
 import secrets
 from dotenv import load_dotenv
 from jai_kisan_agent import JaiKisanAgent
+from voice_api import get_voice_api, get_factory_instance
 
 # Load environment variables from .env file
 load_dotenv()
@@ -46,6 +47,9 @@ class User(UserMixin, db.Model):
     registration_date = db.Column(db.DateTime, default=datetime.utcnow)
     payment_status = db.Column(db.String(20), default='trial')  # trial, paid, expired
     payment_date = db.Column(db.DateTime)
+    # Voice API preference - new field for voice assistant provider selection
+    # Default is 'bharati' for new users; existing users get NULL initially but UI defaults to 'bharati'
+    voice_api_preference = db.Column(db.String(20), default='bharati')  # bharati, legacy
     
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -370,6 +374,144 @@ def serve_public(filename):
     """Serve files from public directory"""
     from flask import send_from_directory
     return send_from_directory('public', filename)
+
+
+# Voice API Endpoints
+@app.route('/api/voice/query', methods=['POST'])
+@login_required
+def voice_query():
+    """
+    Handle voice query from farmer.
+    Accepts voice call events and processes them.
+    """
+    try:
+        call_event = request.get_json()
+        
+        # Get farmer profile
+        farmer_profile = {
+            'mobile': current_user.mobile,
+            'name': current_user.full_name,
+            'state': current_user.state,
+            'voice_api_preference': current_user.voice_api_preference
+        }
+        
+        # Get voice API factory
+        factory = get_factory_instance()
+        
+        # Process the voice query
+        result = factory.receive_voice_query(call_event)
+        
+        if result.get('success'):
+            # Extract the query text and use Jai Kisan Agent to generate response
+            query_text = result.get('query_text', '')
+            
+            # Here you would process the query with JaiKisanAgent
+            # For now, just return the processed query
+            return jsonify({
+                'success': True,
+                'query_received': query_text,
+                'provider': result.get('provider'),
+                'message': 'Query processed successfully'
+            })
+        else:
+            return jsonify(result), 400
+            
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@app.route('/api/voice/send', methods=['POST'])
+@login_required
+def voice_send():
+    """
+    Send voice answer to farmer.
+    Accepts text response and sends it as voice message.
+    """
+    try:
+        data = request.get_json()
+        message = data.get('message', '')
+        
+        if not message:
+            return jsonify({
+                'success': False,
+                'error': 'Message is required'
+            }), 400
+        
+        # Get farmer profile
+        farmer_profile = {
+            'mobile': current_user.mobile,
+            'name': current_user.full_name,
+            'state': current_user.state,
+            'voice_api_preference': current_user.voice_api_preference
+        }
+        
+        # Get voice API factory and send message
+        factory = get_factory_instance()
+        result = factory.send_voice_answer(message, farmer_profile)
+        
+        return jsonify(result)
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@app.route('/api/voice/status')
+@login_required
+def voice_status():
+    """Get status of all voice API providers."""
+    try:
+        factory = get_factory_instance()
+        status = factory.get_provider_status()
+        
+        # Add user's current preference
+        status['user_preference'] = current_user.voice_api_preference
+        status['user_state'] = current_user.state
+        
+        return jsonify(status)
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@app.route('/api/voice/preference', methods=['POST'])
+@login_required
+def set_voice_preference():
+    """Update user's voice API preference."""
+    try:
+        data = request.get_json()
+        preference = data.get('preference', '').lower()
+        
+        if preference not in ['bharati', 'legacy']:
+            return jsonify({
+                'success': False,
+                'error': 'Invalid preference. Must be "bharati" or "legacy"'
+            }), 400
+        
+        # Update user preference
+        current_user.voice_api_preference = preference
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'preference': preference,
+            'message': 'Voice API preference updated successfully'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
 
 # Initialize database
