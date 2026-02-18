@@ -4,6 +4,7 @@ Test script for Shop Discovery, Price Comparison, and Group Buying features
 """
 
 import sys
+import math
 from data.shop_data import (
     SAMPLE_SHOPS,
     BRAND_TO_SALT_MAPPING,
