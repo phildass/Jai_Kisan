@@ -10,6 +10,37 @@
             <p class="tagline">नमस्ते! Get expert fertilizer recommendations</p>
         </div>
 
+        <!-- Quick Access Cards -->
+        <div class="quick-access-section">
+            <div class="quick-access-card" onclick="window.location.href='{{ url_for('shop_discovery') }}'">
+                <div class="card-icon">🏪</div>
+                <h3>Shop Discovery</h3>
+                <p>Find nearby fertilizer shops with live stock and prices</p>
+                <span class="card-badge">NEW</span>
+            </div>
+            
+            <div class="quick-access-card" onclick="window.location.href='{{ url_for('shop_discovery') }}#price-comparison'">
+                <div class="card-icon">💰</div>
+                <h3>Price Comparison</h3>
+                <p>Compare branded vs Kifayati options and save money</p>
+                <span class="card-badge">NEW</span>
+            </div>
+            
+            <div class="quick-access-card" onclick="window.location.href='{{ url_for('shop_discovery') }}#group-buying'">
+                <div class="card-icon">👥</div>
+                <h3>Group Buying</h3>
+                <p>Join fellow farmers for bulk discounts</p>
+                <span class="card-badge">NEW</span>
+            </div>
+            
+            <div class="quick-access-card points-card">
+                <div class="card-icon">🏆</div>
+                <h3>Kisan Points</h3>
+                <p>You have <strong>{{ current_user.kisan_points }}</strong> points</p>
+                <small>Earn more by helping farmers!</small>
+            </div>
+        </div>
+
         <div class="recommendation-form-card">
             <h2>Get Fertilizer Recommendation</h2>
             
