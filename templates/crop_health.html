@@ -1,0 +1,256 @@
+{% extends "base.html" %}
+
+{% block title %}Crop Health & Pest Management - (J)ai Kisan{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="mb-4">🌾 Crop Health & Pest Management</h1>
+            <p class="lead">Your Digital Village Elder for protecting crops</p>
+        </div>
+    </div>
+
+    <!-- Alert Banner -->
+    {% if alerts %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                <h5 class="alert-heading">⚠️ Disease Alerts in Your Region ({{ user_state }})</h5>
+                <ul class="mb-0">
+                {% for alert in alerts %}
+                    <li>
+                        <strong>{{ alert.crop }} - {{ alert.disease_name }}</strong>
+                        (Severity: {{ alert.severity|capitalize }})
+                        <br>
+                        <small>{{ alert.description }}</small>
+                    </li>
+                {% endfor %}
+                </ul>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Quick Actions -->
+    <div class="row mb-4">
+        <div class="col-md-3 col-sm-6 mb-3">
+            <div class="card text-center h-100" style="cursor: pointer;" onclick="window.location.href='/photo-diagnosis'">
+                <div class="card-body">
+                    <h1 class="text-primary">📸</h1>
+                    <h5 class="card-title">Photo Doctor</h5>
+                    <p class="card-text">Take photo of problem</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6 mb-3">
+            <div class="card text-center h-100" style="cursor: pointer;" onclick="window.location.href='/ipm-advisor'">
+                <div class="card-body">
+                    <h1 class="text-success">🛡️</h1>
+                    <h5 class="card-title">IPM Advisor</h5>
+                    <p class="card-text">3-Step Ward-Off</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6 mb-3">
+            <div class="card text-center h-100" style="cursor: pointer;" onclick="window.location.href='/report-pest'">
+                <div class="card-body">
+                    <h1 class="text-warning">🚨</h1>
+                    <h5 class="card-title">Report Pest</h5>
+                    <p class="card-text">Help neighbors</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6 mb-3">
+            <div class="card text-center h-100" style="cursor: pointer;" onclick="window.location.href='/marketplace'">
+                <div class="card-body">
+                    <h1 class="text-info">🏪</h1>
+                    <h5 class="card-title">Marketplace</h5>
+                    <p class="card-text">Find shops & prices</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pest/Disease Knowledge Base -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">📚 Crop Threats Knowledge Base</h5>
+                </div>
+                <div class="card-body">
+                    <div class="form-group mb-3">
+                        <label for="cropSelect"><strong>Select Your Crop:</strong></label>
+                        <select class="form-select form-select-lg" id="cropSelect">
+                            <option value="">-- Choose Crop --</option>
+                            {% for crop in crops %}
+                            <option value="{{ crop }}">{{ crop }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div id="pestDiseaseInfo" class="mt-4" style="display: none;">
+                        <div id="pestsSection"></div>
+                        <div id="diseasesSection"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Neighborhood Watch -->
+    {% if recent_reports %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-warning">
+                    <h5 class="mb-0">👥 Neighborhood Watch - Recent Reports in Your Area</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Crop</th>
+                                    <th>Pest/Disease</th>
+                                    <th>Severity</th>
+                                    <th>Location</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            {% for report in recent_reports %}
+                                <tr>
+                                    <td>{{ report.report_date.strftime('%d %b') }}</td>
+                                    <td>{{ report.crop }}</td>
+                                    <td>{{ report.pest_disease_name }}</td>
+                                    <td>
+                                        <span class="badge bg-{{ 'danger' if report.severity == 'high' or report.severity == 'critical' else 'warning' if report.severity == 'medium' else 'info' }}">
+                                            {{ report.severity|capitalize }}
+                                        </span>
+                                    </td>
+                                    <td>{{ report.location }}</td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <p class="text-muted mb-0"><small>Reports from last 7 days</small></p>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Quick Tips -->
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <div class="card border-success">
+                <div class="card-header bg-success text-white">
+                    <h6 class="mb-0">✅ Prevention Tips (Bhoomi Raksha)</h6>
+                </div>
+                <div class="card-body">
+                    <ul class="mb-0">
+                        <li>Deep summer ploughing to kill pest eggs</li>
+                        <li>Rotate crops - avoid same family consecutively</li>
+                        <li>Use resistant varieties when available</li>
+                        <li>Balanced fertilization (avoid excess nitrogen)</li>
+                        <li>Field sanitation after harvest</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 mb-3">
+            <div class="card border-info">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0">💡 Safety First</h6>
+                </div>
+                <div class="card-body">
+                    <ul class="mb-0">
+                        <li>Check ETL before spraying chemicals</li>
+                        <li>Try organic methods first (Tier 2)</li>
+                        <li>Wear protective gear when spraying</li>
+                        <li>Never spray if rain expected in 4 hours</li>
+                        <li>Follow Pre-Harvest Interval (PHI)</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Load pest/disease info when crop is selected
+document.getElementById('cropSelect').addEventListener('change', function() {
+    const crop = this.value;
+    const infoDiv = document.getElementById('pestDiseaseInfo');
+    
+    if (!crop) {
+        infoDiv.style.display = 'none';
+        return;
+    }
+    
+    fetch(`/pest-disease-info/${encodeURIComponent(crop)}`)
+        .then(response => response.json())
+        .then(data => {
+            const pestsSection = document.getElementById('pestsSection');
+            const diseasesSection = document.getElementById('diseasesSection');
+            
+            // Display pests
+            if (data.pests && data.pests.length > 0) {
+                let pestsHtml = '<h5 class="text-danger">🐛 Common Pests:</h5><div class="row">';
+                data.pests.forEach(pest => {
+                    pestsHtml += `
+                        <div class="col-md-6 mb-3">
+                            <div class="card border-danger">
+                                <div class="card-body">
+                                    <h6 class="card-title text-danger">${pest.name}</h6>
+                                    <p class="mb-1"><small><em>${pest.scientific_name}</em></small></p>
+                                    <p class="mb-1"><strong>Symptoms:</strong> ${pest.symptoms}</p>
+                                    <p class="mb-1"><strong>ETL:</strong> ${pest.etl_threshold}</p>
+                                    <p class="mb-0"><strong>Peak Season:</strong> ${pest.peak_season.join(', ')}</p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                pestsHtml += '</div>';
+                pestsSection.innerHTML = pestsHtml;
+            } else {
+                pestsSection.innerHTML = '';
+            }
+            
+            // Display diseases
+            if (data.diseases && data.diseases.length > 0) {
+                let diseasesHtml = '<h5 class="text-warning mt-3">🦠 Common Diseases:</h5><div class="row">';
+                data.diseases.forEach(disease => {
+                    diseasesHtml += `
+                        <div class="col-md-6 mb-3">
+                            <div class="card border-warning">
+                                <div class="card-body">
+                                    <h6 class="card-title text-warning">${disease.name}</h6>
+                                    <p class="mb-1"><small><em>${disease.scientific_name}</em> (${disease.type})</small></p>
+                                    <p class="mb-1"><strong>Symptoms:</strong> ${disease.symptoms}</p>
+                                    <p class="mb-0"><strong>Favorable Conditions:</strong> ${disease.favorable_conditions}</p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                diseasesHtml += '</div>';
+                diseasesSection.innerHTML = diseasesHtml;
+            } else {
+                diseasesSection.innerHTML = '';
+            }
+            
+            infoDiv.style.display = 'block';
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error loading pest/disease information');
+        });
+});
+</script>
+{% endblock %}
