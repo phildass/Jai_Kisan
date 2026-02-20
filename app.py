@@ -820,6 +820,17 @@ def serve_public(filename):
     return send_from_directory('public', filename)
 
 
+@app.route('/download/jaikisan')
+def download_jaikisan():
+    """Jai Kisan app download page"""
+    return render_template('download/jaikisan.html')
+
+
+@app.route('/download/jaibharat')
+def download_jaibharat():
+    """Jai Bharat app download page"""
+    return render_template('download/jaibharat.html')
+
 
 @app.route('/crop-health')
 @login_required
