@@ -74,7 +74,27 @@
     <!-- Footer -->
     <footer class="app-footer">
         <div class="container">
-            <p>&copy; 2024 (J)ai Kisan - जय किसान! (Victory to the Farmers!)</p>
+            <!-- App Download Section -->
+            <div class="download-apps-section">
+                <h3 class="download-apps-title">Download Our Apps</h3>
+                <div class="download-apps-grid">
+                    <!-- Jai Kisan App -->
+                    <a href="{{ url_for('download_jaikisan') }}" class="download-app-card">
+                        <img src="/public/images/jaikisan.logo.png" alt="Jai Kisan Logo" class="download-app-logo">
+                        <span class="download-app-name">Jai Kisan</span>
+                        <span class="download-app-desc">Agricultural Support App</span>
+                        <span class="download-app-btn">⬇ Download App</span>
+                    </a>
+                    <!-- Jai Bharat App -->
+                    <a href="{{ url_for('download_jaibharat') }}" class="download-app-card">
+                        <img src="/public/images/jaibharat.logo.png" alt="Jai Bharat Logo" class="download-app-logo">
+                        <span class="download-app-name">Jai Bharat</span>
+                        <span class="download-app-desc">Government Jobs Prep</span>
+                        <span class="download-app-btn">⬇ Download App</span>
+                    </a>
+                </div>
+            </div>
+            <p>&copy; 2026 Jai Kisan - जय किसान! (Victory to the Farmers!) | Part of iiskills.cloud</p>
             <p class="footer-tagline">May your fields prosper and your soil stay healthy 🌾</p>
         </div>
     </footer>
