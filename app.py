@@ -10,6 +10,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta
 import os
 import secrets
+import re
 
 import math
 
@@ -21,16 +22,32 @@ from voice_api import get_voice_api, get_factory_instance
 # Load environment variables from .env file
 load_dotenv()
 
+# Email validation regex (RFC 5322 simplified)
+EMAIL_REGEX = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+
 # Initialize Flask app
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', secrets.token_hex(16))
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URI', 'sqlite:///jai_kisan.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
 
 # Initialize extensions
 db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
+
+# CSRF token context processor
+@app.context_processor
+def inject_csrf_token():
+    """Inject a CSRF token into all templates."""
+    if 'csrf_token' not in session:
+        session['csrf_token'] = secrets.token_hex(32)
+    return {'csrf_token': session['csrf_token']}
+
+def validate_csrf(token):
+    """Validate the CSRF token from form submission."""
+    return token and token == session.get('csrf_token')
 
 # Initialize Jai Kisan Agent
 jai_kisan_agent = JaiKisanAgent()
@@ -38,13 +55,17 @@ jai_kisan_agent = JaiKisanAgent()
 # Database Models
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    full_name = db.Column(db.String(100), nullable=False)
-    mobile = db.Column(db.String(15), unique=True, nullable=False)
-    state = db.Column(db.String(50), nullable=False)
+    full_name = db.Column(db.String(100), nullable=True)
+    mobile = db.Column(db.String(15), unique=True, nullable=True)
+    state = db.Column(db.String(50), nullable=True)
     district = db.Column(db.String(50))
-    occupation = db.Column(db.String(50), nullable=False)
-    email = db.Column(db.String(100))
+    occupation = db.Column(db.String(50), nullable=True)
+    email = db.Column(db.String(255), unique=True, nullable=True)
     password_hash = db.Column(db.String(200))
+    email_verified = db.Column(db.Boolean, default=False)
+    is_active = db.Column(db.Boolean, default=True)
+    phone = db.Column(db.String(20), nullable=True)
+    last_login_at = db.Column(db.DateTime, nullable=True)
     google_id = db.Column(db.String(100), unique=True)
     otp = db.Column(db.String(6))
     otp_verified = db.Column(db.Boolean, default=False)
@@ -282,58 +303,64 @@ def home():
 def register():
     """User registration page"""
     if request.method == 'POST':
-        full_name = request.form.get('full_name')
-        mobile = request.form.get('mobile')
-        state = request.form.get('state')
-        district = request.form.get('district')
-        occupation = request.form.get('occupation')
-        email = request.form.get('email')
-        password = request.form.get('password')
-        
+        # Validate CSRF token
+        if not validate_csrf(request.form.get('csrf_token')):
+            flash('Invalid request. Please try again.', 'error')
+            return render_template('auth/register.html')
+
+        email = request.form.get('email', '').strip().lower()
+        password = request.form.get('password', '')
+        confirm_password = request.form.get('confirm_password', '')
+        full_name = request.form.get('full_name', '').strip()
+        phone = request.form.get('phone', '').strip()
+        accept_terms = request.form.get('accept_terms')
+
         # Validation
-        if not all([full_name, mobile, state, occupation, password]):
-            flash('Please fill all required fields', 'error')
-            return render_template('register.html')
-        
+        if not email or not password:
+            flash('Email and password are required', 'error')
+            return render_template('auth/register.html')
+
+        # Email validation
+        if not re.match(EMAIL_REGEX, email):
+            flash('Invalid email address', 'error')
+            return render_template('auth/register.html')
+
+        # Password validation
+        if len(password) < 8:
+            flash('Password must be at least 8 characters', 'error')
+            return render_template('auth/register.html')
+
+        if password != confirm_password:
+            flash('Passwords do not match', 'error')
+            return render_template('auth/register.html')
+
+        if not accept_terms:
+            flash('You must accept the Terms & Conditions', 'error')
+            return render_template('auth/register.html')
+
         # Check if user already exists
-        existing_user = User.query.filter_by(mobile=mobile).first()
+        existing_user = User.query.filter_by(email=email).first()
         if existing_user:
-            flash('Mobile number already registered', 'error')
-            return render_template('register.html')
-        
-        # Generate OTP
-        otp = str(secrets.randbelow(1000000)).zfill(6)
-        
+            flash('Email already registered', 'error')
+            return render_template('auth/register.html')
+
         # Create new user
         user = User(
-            full_name=full_name,
-            mobile=mobile,
-            state=state,
-            district=district,
-            occupation=occupation,
             email=email,
-            otp=otp
+            full_name=full_name or None,
+            phone=phone or None,
+            is_active=True,
+            email_verified=False
         )
         user.set_password(password)
-        
+
         db.session.add(user)
         db.session.commit()
-        
-        # Send OTP
-        send_otp_sms(mobile, otp)
-        
-        # Store user_id in session for OTP verification
-        session['pending_user_id'] = user.id
-        flash('Registration successful! Please verify OTP sent to your mobile.', 'success')
-        return redirect(url_for('verify_otp'))
-    
-    # Get states for dropdown
-    from data.states_data import STATE_REGIONS
-    states = []
-    for region, region_states in STATE_REGIONS.items():
-        states.extend(region_states)
-    
-    return render_template('register.html', states=states)
+
+        flash('Account created successfully! Please log in.', 'success')
+        return redirect(url_for('login'))
+
+    return render_template('auth/register.html')
 
 
 @app.route('/verify-otp', methods=['GET', 'POST'])
@@ -365,33 +392,54 @@ def verify_otp():
 def login():
     """User login page"""
     if request.method == 'POST':
-        mobile = request.form.get('mobile')
-        password = request.form.get('password')
-        
-        user = User.query.filter_by(mobile=mobile).first()
-        
-        if user and user.check_password(password):
-            if not user.otp_verified:
-                flash('Please verify your OTP first', 'error')
-                session['pending_user_id'] = user.id
-                return redirect(url_for('verify_otp'))
-            
-            login_user(user)
-            flash('Login successful!', 'success')
-            return redirect(url_for('dashboard'))
-        else:
-            flash('Invalid mobile number or password', 'error')
-    
-    return render_template('login.html')
+        # Validate CSRF token
+        if not validate_csrf(request.form.get('csrf_token')):
+            flash('Invalid request. Please try again.', 'error')
+            return render_template('auth/login.html')
+
+        email = request.form.get('email', '').strip().lower()
+        password = request.form.get('password', '')
+        remember_me = request.form.get('remember_me')
+
+        if not email or not password:
+            flash('Email and password are required', 'error')
+            return render_template('auth/login.html')
+
+        user = User.query.filter_by(email=email).first()
+
+        if not user:
+            flash('Invalid email or password', 'error')
+            return render_template('auth/login.html')
+
+        if not user.is_active:
+            flash('Your account has been deactivated', 'error')
+            return render_template('auth/login.html')
+
+        if not user.check_password(password):
+            flash('Invalid email or password', 'error')
+            return render_template('auth/login.html')
+
+        # Update last login timestamp
+        user.last_login_at = datetime.utcnow()
+        db.session.commit()
+
+        login_user(user, remember=bool(remember_me))
+        if remember_me:
+            session.permanent = True
+
+        flash('Welcome back!', 'success')
+        return redirect(url_for('dashboard'))
+
+    return render_template('auth/login.html')
 
 
 @app.route('/logout')
-@login_required
 def logout():
     """User logout"""
     logout_user()
-    flash('Logged out successfully', 'success')
-    return redirect(url_for('home'))
+    session.clear()
+    flash('You have been logged out', 'success')
+    return redirect(url_for('login'))
 
 
 @app.route('/dashboard')
